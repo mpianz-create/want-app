@@ -7,17 +7,39 @@
   --bg2: #FFFFFF;
   --bg3: #F4F3F0;
   --border: rgba(0,0,0,0.08);
-  --border2: rgba(0,0,0,0.12);
+  --border2: rgba(0,0,0,0.13);
   --text: #1A1A1A;
   --text2: #555550;
   --text3: #888880;
+  --card: #FFFFFF;
   --v: #6600EE;
   --vl: rgba(102,0,238,0.08);
   --p: #E8007A;
   --pl: rgba(232,0,122,0.08);
-  --y: #D4A800;
-  --yl: rgba(212,168,0,0.1);
-  --lv: #8855CC;
+  --y: #C49A00;
+  --yl: rgba(196,154,0,0.1);
+  --lv: #7744BB;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+[data-theme="dark"] {
+  --bg: #111111;
+  --bg2: #1A1A1A;
+  --bg3: #222222;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.13);
+  --text: #F0F0EE;
+  --text2: #AAAAAA;
+  --text3: #666666;
+  --card: #1A1A1A;
+  --v: #9966FF;
+  --vl: rgba(153,102,255,0.12);
+  --p: #FF4DAA;
+  --pl: rgba(255,77,170,0.12);
+  --y: #DDAA00;
+  --yl: rgba(221,170,0,0.12);
+  --lv: #AA88EE;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,11 +50,12 @@ html, body {
   font-family: 'Space Grotesk', sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.4s ease, color 0.4s ease;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg3); }
-::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
 input, select, button { font-family: inherit; }
 input::placeholder { color: var(--text3); }
