@@ -1,61 +1,202 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --bg: #FAFAF8;
-  --bg2: #FFFFFF;
-  --bg3: #F4F3F0;
-  --border: rgba(0,0,0,0.08);
-  --border2: rgba(0,0,0,0.13);
-  --text: #1A1A1A;
-  --text2: #555550;
-  --text3: #888880;
-  --card: #FFFFFF;
-  --v: #6600EE;
-  --vl: rgba(102,0,238,0.08);
-  --p: #E8007A;
-  --pl: rgba(232,0,122,0.08);
-  --y: #C49A00;
-  --yl: rgba(196,154,0,0.1);
-  --lv: #7744BB;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+/* ─── Design tokens ─────────────────────────────────────────────────────────── */
+/* Tailwind v4 — tokens defined in CSS, usable as tw classes via @theme */
+
+@theme {
+  /* Colours */
+  --color-bg:       #FAFAF8;
+  --color-bg2:      #FFFFFF;
+  --color-bg3:      #F4F3F0;
+  --color-card:     #FFFFFF;
+  --color-text:     #1A1A1A;
+  --color-text2:    #555550;
+  --color-text3:    #888880;
+  --color-border:   rgba(0,0,0,0.08);
+  --color-border2:  rgba(0,0,0,0.13);
+  --color-violet:   #6600EE;
+  --color-violetl:  rgba(102,0,238,0.08);
+  --color-pink:     #E8007A;
+  --color-pinkl:    rgba(232,0,122,0.08);
+  --color-gold:     #C49A00;
+  --color-lavender: #7744BB;
+
+  /* Typography */
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'Space Grotesk', sans-serif;
+
+  /* Border radius */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;
+  --radius-pill: 20px;
+
+  /* Spacing — supplements Tailwind defaults */
+  --spacing-7: 28px;
+
+  /* Animation durations */
+  --duration-fast:   100ms;
+  --duration-base:   150ms;
+  --duration-slow:   300ms;
+  --duration-theme:  400ms;
+
+  /* Animation easings */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ─── Dark mode ─────────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg: #111111;
-  --bg2: #1A1A1A;
-  --bg3: #222222;
-  --border: rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.13);
-  --text: #F0F0EE;
-  --text2: #AAAAAA;
-  --text3: #666666;
-  --card: #1A1A1A;
-  --v: #9966FF;
-  --vl: rgba(153,102,255,0.12);
-  --p: #FF4DAA;
-  --pl: rgba(255,77,170,0.12);
-  --y: #DDAA00;
-  --yl: rgba(221,170,0,0.12);
-  --lv: #AA88EE;
-  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --color-bg:       #111111;
+  --color-bg2:      #1A1A1A;
+  --color-bg3:      #222222;
+  --color-card:     #1A1A1A;
+  --color-text:     #F0F0EE;
+  --color-text2:    #AAAAAA;
+  --color-text3:    #666666;
+  --color-border:   rgba(255,255,255,0.08);
+  --color-border2:  rgba(255,255,255,0.13);
+  --color-violet:   #9966FF;
+  --color-violetl:  rgba(153,102,255,0.12);
+  --color-pink:     #FF4DAA;
+  --color-pinkl:    rgba(255,77,170,0.12);
+  --color-gold:     #DDAA00;
+  --color-lavender: #AA88EE;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─── Base ───────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Space Grotesk', sans-serif;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  transition: background 0.4s ease, color 0.4s ease;
+  background:              var(--color-bg);
+  color:                   var(--color-text);
+  font-family:             var(--font-body);
+  min-height:              100vh;
+  -webkit-font-smoothing:  antialiased;
+  transition:              background var(--duration-theme) var(--ease-default),
+                           color var(--duration-theme) var(--ease-default);
 }
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: var(--bg3); }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+/* ─── Focus styles ───────────────────────────────────────────────────────────── */
+/* Visible focus ring for keyboard navigation — respects user preference */
+:focus-visible {
+  outline:        2px solid var(--color-violet);
+  outline-offset: 2px;
+  border-radius:  var(--radius-md);
+}
 
-input, select, button { font-family: inherit; }
-input::placeholder { color: var(--text3); }
+/* Remove default focus for mouse users */
+:focus:not(:focus-visible) { outline: none; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline:        2px solid var(--color-violet);
+  outline-offset: 2px;
+  border-radius:  var(--radius-md);
+}
+
+/* ─── Inputs ─────────────────────────────────────────────────────────────────── */
+input, select, button, textarea { font-family: inherit; }
+input::placeholder  { color: var(--color-text3); }
+select              { cursor: pointer; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar               { width: 4px; height: 4px; }
+::-webkit-scrollbar-track         { background: var(--color-bg3); }
+::-webkit-scrollbar-thumb         { background: var(--color-border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover   { background: var(--color-text3); }
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+@keyframes pulse      { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
+@keyframes fadeIn     { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes slideUp    { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes scaleIn    { from { opacity: 0; transform: scale(0.95) } to { opacity: 1; transform: scale(1) } }
+@keyframes spin       { to { transform: rotate(360deg) } }
+
+/* ─── Utility classes ────────────────────────────────────────────────────────── */
+.animate-pulse-skeleton { animation: pulse 1.4s ease-in-out infinite; }
+.animate-fade-in        { animation: fadeIn var(--duration-slow) var(--ease-default); }
+.animate-slide-up       { animation: slideUp var(--duration-slow) var(--ease-default); }
+.animate-scale-in       { animation: scaleIn var(--duration-base) var(--ease-default); }
+.animate-spin           { animation: spin 0.8s linear infinite; }
+
+/* Interactive states */
+.interactive {
+  transition: opacity var(--duration-base) var(--ease-default),
+              transform var(--duration-base) var(--ease-default),
+              box-shadow var(--duration-base) var(--ease-default);
+}
+.interactive:hover  { opacity: 0.88; }
+.interactive:active { transform: scale(0.97); }
+
+/* Card hover lift */
+.card-hover {
+  transition: box-shadow var(--duration-base) var(--ease-default),
+              border-color var(--duration-base) var(--ease-default),
+              transform var(--duration-base) var(--ease-default);
+}
+.card-hover:hover {
+  box-shadow:   0 4px 16px rgba(0,0,0,0.08);
+  border-color: var(--color-border2) !important;
+  transform:    translateY(-1px);
+}
+
+/* Image zoom on card hover */
+.card-hover:hover .img-zoom { transform: scale(1.04); }
+.img-zoom { transition: transform var(--duration-slow) var(--ease-default); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:   0.01ms !important;
+    transition-duration:  0.01ms !important;
+  }
+}
+
+/* ─── Mobile responsive helpers ─────────────────────────────────────────────── */
+/* Grid that collapses gracefully */
+.want-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .want-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .want-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Sidebar hides on mobile, page nav appears instead */
+.sidebar       { display: flex; }
+.mobile-nav    { display: none; }
+
+@media (max-width: 768px) {
+  .sidebar     { display: none; }
+  .mobile-nav  { display: flex; }
+  .main-body   { flex-direction: column; }
+}
+
+/* Page padding shrinks on mobile */
+.page-pad         { padding-left: 28px; padding-right: 28px; }
+@media (max-width: 640px) {
+  .page-pad       { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Typography scales down slightly on mobile */
+@media (max-width: 640px) {
+  .display-heading { font-size: 18px !important; }
+}

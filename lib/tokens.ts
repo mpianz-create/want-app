@@ -1,28 +1,26 @@
 // ─── Design tokens ────────────────────────────────────────────────────────────
-// Single source of truth for all inline style values.
-// CSS variables handle light/dark switching — these tokens reference them.
+// Single source of truth. All values mirror globals.css @theme.
+// Import these in components — never hardcode hex values or px directly.
 
 import type React from 'react'
 
-// ── Colour references (use in style={{ color: colors.text }}) ──
 export const colors = {
-  text:    'var(--text)',
-  text2:   'var(--text2)',
-  text3:   'var(--text3)',
-  bg:      'var(--bg)',
-  bg3:     'var(--bg3)',
-  card:    'var(--card)',
-  border:  'var(--border)',
-  border2: 'var(--border2)',
-  violet:  'var(--v)',
-  violetL: 'var(--vl)',
-  pink:    'var(--p)',
-  pinkL:   'var(--pl)',
-  gold:    'var(--y)',
-  lavender:'var(--lv)',
+  text:     'var(--color-text)',
+  text2:    'var(--color-text2)',
+  text3:    'var(--color-text3)',
+  bg:       'var(--color-bg)',
+  bg3:      'var(--color-bg3)',
+  card:     'var(--color-card)',
+  border:   'var(--color-border)',
+  border2:  'var(--color-border2)',
+  violet:   'var(--color-violet)',
+  violetL:  'var(--color-violetl)',
+  pink:     'var(--color-pink)',
+  pinkL:    'var(--color-pinkl)',
+  gold:     'var(--color-gold)',
+  lavender: 'var(--color-lavender)',
 }
 
-// ── Border radius ──
 export const radius = {
   sm:   6,
   md:   8,
@@ -33,27 +31,40 @@ export const radius = {
   full: '50%',
 } as const
 
-// ── Spacing ──
 export const space = {
-  1:  4,
-  2:  8,
-  3:  12,
-  4:  16,
-  6:  24,
-  7:  28,
-  8:  32,
+  1: 4, 2: 8, 3: 12, 4: 16, 6: 24, 7: 28, 8: 32,
 } as const
 
-// ── Typography ──
 export const font = {
   display: "'Syne', sans-serif",
   body:    "'Space Grotesk', sans-serif",
 } as const
 
-// ── Product image heights ──
+// Animation durations — mirrors CSS @theme
+export const duration = {
+  fast:  'var(--duration-fast)',
+  base:  'var(--duration-base)',
+  slow:  'var(--duration-slow)',
+  theme: 'var(--duration-theme)',
+} as const
+
+export const ease = {
+  default: 'var(--ease-default)',
+  spring:  'var(--ease-spring)',
+} as const
+
+// Transition shorthand
+export const transition = {
+  base:        `all ${duration.base} ${ease.default}`,
+  color:       `color ${duration.base} ${ease.default}, background ${duration.base} ${ease.default}`,
+  border:      `border-color ${duration.base} ${ease.default}`,
+  shadow:      `box-shadow ${duration.base} ${ease.default}`,
+  transform:   `transform ${duration.base} ${ease.default}`,
+  themeSwitch: `background ${duration.theme} ${ease.default}, color ${duration.theme} ${ease.default}`,
+} as const
+
 export const CARD_HEIGHTS = [260, 300, 230, 280, 250, 290, 220, 270]
 
-// ── Curated Unsplash photo IDs by category ──
 export const PHOTO_IDS: Record<string, string[]> = {
   Fashion: ['NMZdj2Zu36M','omNDTa2oPGg','1_Xp8JFBqDk','WpVjIE3PpGo','I2YSmEUAgDY','mEZ3PoFGs_k'],
   Home:    ['RkBTPqPEGDo','Bkci_8qcdvQ','5SdBLMlFRMg','IFLgWYlT2fI','lH6YGqPKSA4','v3-zcCWMjgM'],
@@ -67,51 +78,51 @@ export const CATEGORY_EMOJI: Record<string, string> = {
 }
 
 export const AESTHETICS = [
-  { id: 'ql',    name: 'quiet luxury',  emoji: '🤍', bg: '#F5F3EE', bgDark: '#1E1C18', desc: 'minimal. timeless. no logos.' },
-  { id: 'da',    name: 'dark academia', emoji: '🕯️', bg: '#EDE8E0', bgDark: '#1A1610', desc: 'tweed. candles. obsession.' },
-  { id: 'cg',    name: 'coastal grandma',emoji:'🌊', bg: '#E8F0F0', bgDark: '#101818', desc: 'linen. ocean. effortless.' },
-  { id: 'cc',    name: 'cottagecore',   emoji: '🌿', bg: '#EBF0E5', bgDark: '#121810', desc: 'floral. wicker. whimsy.' },
-  { id: 'clean', name: 'clean girl',    emoji: '✨', bg: '#F5F3EE', bgDark: '#1E1C18', desc: 'glowy. gold hoops. fresh.' },
-  { id: 'y2k',   name: 'y2k revival',   emoji: '💿', bg: '#EEE8F5', bgDark: '#180E28', desc: 'metallics. butterfly clips. chaos.' },
-  { id: 'sw',    name: 'streetwear',    emoji: '🔥', bg: '#EEEEEE', bgDark: '#181818', desc: 'oversized. sneakers. attitude.' },
-  { id: 'bh',    name: 'boho chic',     emoji: '🪬', bg: '#F0EBE0', bgDark: '#1E1608', desc: 'fringe. earthy. free-spirited.' },
+  { id: 'ql',    name: 'quiet luxury',   emoji: '🤍', bg: '#F5F3EE', bgDark: '#1E1C18', desc: 'minimal. timeless. no logos.' },
+  { id: 'da',    name: 'dark academia',  emoji: '🕯️', bg: '#EDE8E0', bgDark: '#1A1610', desc: 'tweed. candles. obsession.' },
+  { id: 'cg',    name: 'coastal grandma',emoji: '🌊', bg: '#E8F0F0', bgDark: '#101818', desc: 'linen. ocean. effortless.' },
+  { id: 'cc',    name: 'cottagecore',    emoji: '🌿', bg: '#EBF0E5', bgDark: '#121810', desc: 'floral. wicker. whimsy.' },
+  { id: 'clean', name: 'clean girl',     emoji: '✨', bg: '#F5F3EE', bgDark: '#1E1C18', desc: 'glowy. gold hoops. fresh.' },
+  { id: 'y2k',   name: 'y2k revival',    emoji: '💿', bg: '#EEE8F5', bgDark: '#180E28', desc: 'metallics. butterfly clips. chaos.' },
+  { id: 'sw',    name: 'streetwear',     emoji: '🔥', bg: '#EEEEEE', bgDark: '#181818', desc: 'oversized. sneakers. attitude.' },
+  { id: 'bh',    name: 'boho chic',      emoji: '🪬', bg: '#F0EBE0', bgDark: '#1E1608', desc: 'fringe. earthy. free-spirited.' },
 ]
 
-// ── Style factories ──────────────────────────────────────────────────────────
-// These return CSSProperties objects — use as style={{ ...btn() }}
+// ─── Style factory functions ──────────────────────────────────────────────────
 
 export function btn(variant: 'primary' | 'secondary' | 'ghost' = 'primary'): React.CSSProperties {
   const base: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: space[2],
     cursor: 'pointer', border: 'none', fontFamily: font.body,
     fontWeight: 600, fontSize: 13, borderRadius: radius.md,
-    transition: 'all .15s', whiteSpace: 'nowrap',
+    transition: transition.base, whiteSpace: 'nowrap',
   }
-  if (variant === 'primary') return { ...base, background: colors.text, color: colors.bg, padding: '9px 18px' }
+  if (variant === 'primary')   return { ...base, background: colors.text,  color: colors.bg,   padding: '9px 18px' }
   if (variant === 'secondary') return { ...base, background: 'transparent', color: colors.text, border: `1px solid ${colors.border2}`, padding: '8px 16px' }
-  return { ...base, background: 'transparent', color: colors.text2, border: `1px solid ${colors.border}`, padding: '7px 14px' }
+  return                              { ...base, background: 'transparent', color: colors.text2, border: `1px solid ${colors.border}`, padding: '7px 14px' }
 }
 
 export function pill(active: boolean): React.CSSProperties {
   return {
-    display: 'inline-flex', alignItems: 'center', padding: `6px ${space[4]}px`,
-    borderRadius: radius.pill, fontSize: 12, cursor: 'pointer',
-    fontFamily: font.body, whiteSpace: 'nowrap', transition: 'all .15s',
-    border: active ? 'none' : `1px solid ${colors.border2}`,
-    background: active ? colors.text : 'transparent',
-    color: active ? colors.bg : colors.text2,
-    fontWeight: active ? 600 : 400,
+    display: 'inline-flex', alignItems: 'center',
+    padding: `6px ${space[4]}px`, borderRadius: radius.pill,
+    fontSize: 12, cursor: 'pointer', fontFamily: font.body,
+    whiteSpace: 'nowrap', transition: transition.base,
+    border:      active ? 'none'          : `1px solid ${colors.border2}`,
+    background:  active ? colors.text     : 'transparent',
+    color:       active ? colors.bg       : colors.text2,
+    fontWeight:  active ? 600             : 400,
   }
 }
 
 export function iconBtn(active = false, activeColor = colors.pink): React.CSSProperties {
   return {
     width: 30, height: 30, borderRadius: radius.sm,
-    border: active ? `1px solid ${activeColor}40` : `1px solid ${colors.border}`,
-    background: active ? `${activeColor}18` : 'transparent',
+    border:      active ? `1px solid ${activeColor}40` : `1px solid ${colors.border}`,
+    background:  active ? `${activeColor}18`           : 'transparent',
     cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
     justifyContent: 'center', color: active ? activeColor : colors.text3,
-    fontSize: 14, transition: 'all .15s', flexShrink: 0,
+    fontSize: 14, transition: transition.base, flexShrink: 0,
   }
 }
 
@@ -120,6 +131,7 @@ export const inp: React.CSSProperties = {
   border: `1px solid ${colors.border2}`, borderRadius: radius.md,
   fontFamily: font.body, fontSize: 13,
   color: colors.text, background: colors.card, outline: 'none',
+  transition: transition.border,
 }
 
 export const lbl: React.CSSProperties = {
@@ -133,7 +145,8 @@ export const sectionHeadStyle: React.CSSProperties = {
   textTransform: 'uppercase', color: colors.text3, marginBottom: space[4],
 }
 
-// ── Helpers ──
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 export function unsplashUrl(photoId: string, w: number, h: number): string {
   return `https://images.unsplash.com/photo-${photoId}?w=${w}&h=${h}&fit=crop&crop=center&auto=format&q=80`
 }
