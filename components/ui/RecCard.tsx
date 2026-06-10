@@ -1,5 +1,5 @@
 'use client'
-import { btn, colors, font, CARD_HEIGHTS } from '@/lib/tokens'
+import { btn, colors, font } from '@/lib/tokens'
 import { ItemImage } from './ItemImage'
 import type { RecItem, Item } from '@/types'
 
@@ -12,8 +12,11 @@ interface Props {
 
 export function RecCard({ item, idx, saved, onSave }: Props) {
   const height = 220 + (idx % 3) * 30
-  // Build a minimal Item shape for ItemImage
-  const fakeItem: Item = { id: idx + 100, name: item.name, store: item.store, price: item.price, sale_price: null, is_sale: false, is_new: false, is_pinned: false, is_saved: false, category: item.category, note: '' }
+  const fakeItem: Item = {
+    id: `rec-${idx}`, name: item.name, store: item.store, price: item.price,
+    salePrice: null, isSale: false, isNew: false, isPinned: false, isSaved: false,
+    category: item.category, note: '',
+  }
 
   return (
     <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${colors.border}`, background: colors.card }}>
@@ -26,8 +29,7 @@ export function RecCard({ item, idx, saved, onSave }: Props) {
           <span style={{ fontSize: 15, fontWeight: 700, fontFamily: font.display, color: colors.text }}>~${item.price}</span>
           <button
             style={{ ...btn(saved ? 'ghost' : 'primary'), fontSize: 11, padding: '6px 14px', borderRadius: 20 }}
-            onClick={onSave}
-            disabled={saved}
+            onClick={onSave} disabled={saved}
           >
             {saved ? 'Saved ✓' : 'Save'}
           </button>

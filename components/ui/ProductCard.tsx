@@ -1,7 +1,7 @@
 'use client'
 import { Icon } from './Icon'
 import { useState } from 'react'
-import { btn, iconBtn, colors, radius, space, font, CARD_HEIGHTS } from '@/lib/tokens'
+import { iconBtn, colors, radius, space, font, CARD_HEIGHTS, strHash } from '@/lib/tokens'
 import { ItemImage } from './ItemImage'
 import { Badge } from './Badge'
 import type { Item, Collection } from '@/types'
@@ -16,32 +16,32 @@ interface Props {
   onTogglePin: () => void
   onToggleSaved: () => void
   onToggleCollection: (colId: string) => void
-  onNewCollection: (itemId: number) => void
+  onNewCollection: (itemId: string) => void
   onRemove: () => void
 }
 
 export function ProductCard({ item, collections, isDragging, onDragStart, onDragEnd, onDrop, onTogglePin, onToggleSaved, onToggleCollection, onNewCollection, onRemove }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const height = CARD_HEIGHTS[item.id % CARD_HEIGHTS.length]
+  const height = CARD_HEIGHTS[strHash(item.id) % CARD_HEIGHTS.length]
   const inCols = collections.filter(c => c.itemIds.includes(item.id))
 
   return (
     <div
-      style={{ borderRadius: radius.xl, overflow: 'visible', border: item.is_pinned ? `2px solid ${colors.violet}` : `1px solid ${colors.border}`, background: colors.card, cursor: 'grab', userSelect: 'none', position: 'relative', opacity: isDragging ? 0.4 : 1, transition: 'box-shadow .2s' }}
+      style={{ borderRadius: radius.xl, overflow: 'visible', border: item.isPinned ? `2px solid ${colors.violet}` : `1px solid ${colors.border}`, background: colors.card, cursor: 'grab', userSelect: 'none', position: 'relative', opacity: isDragging ? 0.4 : 1, transition: 'box-shadow .2s' }}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragOver={e => e.preventDefault()}
       onDrop={onDrop}
     >
-      {item.is_pinned && (
+      {item.isPinned && (
         <div style={{ position: 'absolute', top: -8, right: -8, width: 22, height: 22, background: colors.violet, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, zIndex: 3 }}>📌</div>
       )}
 
       <div style={{ borderRadius: radius.xl, overflow: 'hidden' }}>
         <div style={{ position: 'relative' }}>
-          {item.is_sale && <Badge variant="sale">Sale</Badge>}
-          {item.is_new && !item.is_sale && <Badge variant="new">New</Badge>}
+          {item.isSale && <Badge variant="sale">Sale</Badge>}
+          {item.isNew && !item.isSale && <Badge variant="new">New</Badge>}
           <ItemImage item={item} height={height} />
         </div>
 
@@ -51,13 +51,13 @@ export function ProductCard({ item, collections, isDragging, onDragStart, onDrag
           {item.note && <div style={{ fontSize: 11, color: colors.text3, marginBottom: 8, fontStyle: 'italic' }}>{item.note}</div>}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: font.display, color: item.is_sale ? colors.pink : colors.text }}>
-              ${item.is_sale ? item.sale_price : item.price}
+            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: font.display, color: item.isSale ? colors.pink : colors.text }}>
+              ${item.isSale ? item.salePrice : item.price}
             </span>
 
             <div style={{ display: 'flex', gap: 4, position: 'relative' }}>
-              <button style={iconBtn(item.is_pinned, colors.violet)} onClick={onTogglePin} aria-label={item.is_pinned ? 'Unpin item' : 'Pin to top'} aria-pressed={item.is_pinned}><Icon name="pin" /></button>
-              <button style={iconBtn(item.is_saved, colors.pink)} onClick={onToggleSaved} aria-label={item.is_saved ? 'Remove from favourites' : 'Add to favourites'} aria-pressed={item.is_saved}><Icon name="heart" /></button>
+              <button style={iconBtn(item.isPinned, colors.violet)} onClick={onTogglePin} aria-label={item.isPinned ? 'Unpin item' : 'Pin to top'} aria-pressed={item.isPinned}><Icon name="pin" /></button>
+              <button style={iconBtn(item.isSaved, colors.pink)} onClick={onToggleSaved} aria-label={item.isSaved ? 'Remove from favourites' : 'Add to favourites'} aria-pressed={item.isSaved}><Icon name="heart" /></button>
 
               <div style={{ position: 'relative' }}>
                 <button style={iconBtn(inCols.length > 0, colors.violet)} onClick={() => setMenuOpen(v => !v)} aria-label="Add to collection" aria-expanded={menuOpen} aria-haspopup="listbox"><Icon name="folder-plus" /></button>

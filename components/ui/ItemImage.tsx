@@ -11,18 +11,17 @@ interface Props {
 
 export function ItemImage({ item, height, overrideIdx }: Props) {
   const [failed, setFailed] = useState(false)
-  const photoId = getPhotoId(item.category, overrideIdx ?? item.id)
   const emoji = CATEGORY_EMOJI[item.category] || '🛍️'
+  // Real product image takes priority; curated Unsplash photo as fallback
+  const src = item.imageUrl || unsplashUrl(getPhotoId(item.category, overrideIdx ?? item.id), 600, height * 2)
 
   return (
-    <div style={{ height, overflow: 'hidden', background: 'var(--bg3)', flexShrink: 0 }}>
+    <div style={{ height, overflow: 'hidden', background: 'var(--color-bg3)', flexShrink: 0 }}>
       {failed ? (
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>
-          {emoji}
-        </div>
+        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>{emoji}</div>
       ) : (
         <img
-          src={unsplashUrl(photoId, 600, height * 2)}
+          src={src}
           alt={item.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.4s ease' }}
           loading="lazy"

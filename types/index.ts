@@ -5,23 +5,25 @@ export type ExploreTab = 'foryou' | 'aesthetics'
 export type Theme = 'auto' | 'light' | 'dark'
 
 export interface Item {
-  id: number
+  id: string
   name: string
   store: string
   price: number
-  sale_price: number | null
-  is_sale: boolean
-  is_new: boolean
-  is_pinned: boolean
-  is_saved: boolean
+  salePrice: number | null
+  isSale: boolean
+  isNew: boolean
+  isPinned: boolean
+  isSaved: boolean
   category: Category
   note: string
+  imageUrl?: string | null
+  productUrl?: string | null
 }
 
 export interface Collection {
   id: string
   name: string
-  itemIds: number[]
+  itemIds: string[]
 }
 
 export interface RecItem {

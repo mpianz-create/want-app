@@ -1,8 +1,9 @@
 'use client'
-import { Icon } from '@/components/ui/Icon'
 import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSession, signOut } from '@/lib/auth-client'
 import { btn, pill, inp, lbl, colors, radius, space, font, isDarkHour, getGreeting, AESTHETICS } from '@/lib/tokens'
-import { INITIAL_ITEMS, INITIAL_COLLECTIONS } from '@/lib/data'
+import { Icon } from '@/components/ui/Icon'
 import { ProductCard } from '@/components/ui/ProductCard'
 import { RecCard } from '@/components/ui/RecCard'
 import { ItemImage } from '@/components/ui/ItemImage'
@@ -13,13 +14,25 @@ import { ToastContainer, useToast } from '@/components/ui/Toast'
 import { ErrorState } from '@/components/ui/ErrorState'
 import type { Item, Collection, RecSection, FilterType, PageTab, ExploreTab, Category, Theme } from '@/types'
 
+// ── Small API helper ──
+async function api<T = unknown>(url: string, method = 'GET', body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) throw new Error(`${res.status}`)
+  return res.json()
+}
+
 export default function WantApp() {
+  const router = useRouter()
+  const { data: session, isPending: sessionLoading } = useSession()
   const { toasts, toast, dismiss } = useToast()
 
-  const [items, setItems] = useState<Item[]>(INITIAL_ITEMS)
-  const [collections, setCollections] = useState<Collection[]>(INITIAL_COLLECTIONS)
-  const [nextId, setNextId] = useState(8)
-  const [nextColId, setNextColId] = useState(3)
+  const [items, setItems] = useState<Item[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
 
   const [page, setPage] = useState<PageTab>('saves')
   const [exTab, setExTab] = useState<ExploreTab>('foryou')
@@ -31,7 +44,7 @@ export default function WantApp() {
   const [viewingColId, setViewingColId] = useState<string | null>(null)
   const [renamingCol, setRenamingCol] = useState<string | null>(null)
   const [renameVal, setRenameVal] = useState('')
-  const [dragSrc, setDragSrc] = useState<number | null>(null)
+  const [dragSrc, setDragSrc] = useState<string | null>(null)
 
   const [selectedAes, setSelectedAes] = useState<Set<string>>(new Set())
   const [recs, setRecs] = useState<RecSection[]>([])
@@ -51,10 +64,23 @@ export default function WantApp() {
   const [isDark, setIsDark] = useState(false)
   const [theme, setTheme] = useState<Theme>('auto')
 
+  // ── Auth guard ──
+  useEffect(() => {
+    if (!sessionLoading && !session) router.push('/auth/login')
+  }, [session, sessionLoading, router])
+
+  // ── Load data once authed ──
+  useEffect(() => {
+    if (!session) return
+    let cancelled = false
+    Promise.all([api<Item[]>('/api/items'), api<Collection[]>('/api/collections')])
+      .then(([i, c]) => { if (!cancelled) { setItems(i); setCollections(c); setDataLoading(false) } })
+      .catch(() => { if (!cancelled) { setDataLoading(false); toast.error('Could not load your saves.') } })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
+
   // ── Time-based theme ──
-  // The inline script in layout.tsx sets data-theme before first paint.
-  // This effect syncs React state with what the DOM already has,
-  // so there's no flash and no hydration mismatch.
   useEffect(() => {
     setMounted(true)
     const apply = () => {
@@ -67,119 +93,128 @@ export default function WantApp() {
     return () => clearInterval(t)
   }, [theme])
 
-  // ── Derived state ──
+  // ── Derived ──
   const filteredItems = items.filter(i => {
     if (catTab !== 'all' && i.category !== catTab) return false
-    if (filter === 'sale' && !i.is_sale) return false
-    if (filter === 'new' && !i.is_new) return false
-    if (filter === 'under100' && (i.is_sale ? i.sale_price! : i.price) >= 100) return false
-    if (filter === 'saved' && !i.is_saved) return false
+    if (filter === 'sale' && !i.isSale) return false
+    if (filter === 'new' && !i.isNew) return false
+    if (filter === 'under100' && (i.isSale ? i.salePrice! : i.price) >= 100) return false
+    if (filter === 'saved' && !i.isSaved) return false
     if (search) { const q = search.toLowerCase(); return [i.name, i.store, i.category, i.note].some(f => f?.toLowerCase().includes(q)) }
     return true
   })
-  const pinnedItems = filteredItems.filter(i => i.is_pinned && !search)
-  const boardItems  = search ? filteredItems : filteredItems.filter(i => !i.is_pinned)
+  const pinnedItems = filteredItems.filter(i => i.isPinned && !search)
+  const boardItems  = search ? filteredItems : filteredItems.filter(i => !i.isPinned)
   const statItems   = catTab === 'all' ? items : items.filter(i => i.category === catTab)
-  const totalVal    = statItems.reduce((s, i) => s + (i.is_sale ? i.sale_price! : i.price), 0)
+  const totalVal    = statItems.reduce((s, i) => s + (i.isSale ? i.salePrice! : i.price), 0)
 
-  // ── Mutations ──
-  const togglePin = (id: number) => {
-    const item = items.find(i => i.id === id)
-    setItems(p => p.map(i => i.id === id ? { ...i, is_pinned: !i.is_pinned } : i))
-    toast.info(item?.is_pinned ? 'Unpinned' : 'Pinned to top')
+  // ── Mutations (optimistic + API sync) ──
+  const togglePin = (id: string) => {
+    const item = items.find(i => i.id === id); if (!item) return
+    setItems(p => p.map(i => i.id === id ? { ...i, isPinned: !i.isPinned } : i))
+    api(`/api/items/${id}`, 'PATCH', { isPinned: !item.isPinned }).catch(() => toast.error('Could not save change'))
+    toast.info(item.isPinned ? 'Unpinned' : 'Pinned to top')
   }
-  const toggleSaved = (id: number) => {
-    const item = items.find(i => i.id === id)
-    setItems(p => p.map(i => i.id === id ? { ...i, is_saved: !i.is_saved } : i))
-    toast.success(item?.is_saved ? 'Removed from favourites' : 'Added to favourites')
+  const toggleSaved = (id: string) => {
+    const item = items.find(i => i.id === id); if (!item) return
+    setItems(p => p.map(i => i.id === id ? { ...i, isSaved: !i.isSaved } : i))
+    api(`/api/items/${id}`, 'PATCH', { isSaved: !item.isSaved }).catch(() => toast.error('Could not save change'))
+    toast.success(item.isSaved ? 'Removed from favourites' : 'Added to favourites')
   }
-  const removeItem = (id: number) => {
+  const removeItem = (id: string) => {
     setItems(p => p.filter(i => i.id !== id))
     setCollections(p => p.map(c => ({ ...c, itemIds: c.itemIds.filter(x => x !== id) })))
+    api(`/api/items/${id}`, 'DELETE').catch(() => toast.error('Could not delete'))
     toast.info('Item removed')
   }
-  const toggleInCol = (colId: string, itemId: number) => {
+  const toggleInCol = (colId: string, itemId: string) => {
     const col = collections.find(c => c.id === colId)
     const isIn = col?.itemIds.includes(itemId)
     setCollections(p => p.map(c => c.id !== colId ? c : { ...c, itemIds: isIn ? c.itemIds.filter(x => x !== itemId) : [...c.itemIds, itemId] }))
+    api(`/api/collections/${colId}`, 'PATCH', { toggleItemId: itemId }).catch(() => toast.error('Could not update collection'))
     toast.success(isIn ? `Removed from ${col?.name}` : `Added to ${col?.name}`)
   }
-  const newColFor = (itemId: number) => {
+  const newColFor = (itemId?: string) => {
     const n = prompt('Collection name:')
-    if (n?.trim()) {
-      setCollections(p => [...p, { id: 'c'+nextColId, name: n.trim(), itemIds: [itemId] }])
-      setNextColId(x => x+1)
-      toast.success(`Collection "${n.trim()}" created`)
-    }
+    if (!n?.trim()) return
+    api<Collection>('/api/collections', 'POST', { name: n.trim(), itemId })
+      .then(col => { setCollections(p => [...p, col]); toast.success(`"${col.name}" created`) })
+      .catch(() => toast.error('Could not create collection'))
+  }
+  const renameCol = (colId: string, name: string) => {
+    if (!name.trim()) return
+    setCollections(p => p.map(c => c.id === colId ? { ...c, name: name.trim() } : c))
+    api(`/api/collections/${colId}`, 'PATCH', { name: name.trim() }).catch(() => toast.error('Could not rename'))
+  }
+  const deleteCol = (colId: string) => {
+    setCollections(p => p.filter(c => c.id !== colId))
+    api(`/api/collections/${colId}`, 'DELETE').catch(() => toast.error('Could not delete'))
+    toast.info('Collection deleted')
   }
   const addItem = (f: typeof modalFields) => {
-    const id = nextId; setNextId(n => n+1)
-    setItems(p => [{ id, name: f.name, store: f.store, price: parseFloat(f.price)||0, sale_price: null, is_sale: false, is_new: true, is_pinned: false, is_saved: false, category: f.category, note: f.note }, ...p])
+    api<Item>('/api/items', 'POST', { name: f.name, store: f.store, price: parseFloat(f.price)||0, category: f.category, note: f.note })
+      .then(item => { setItems(p => [item, ...p]); toast.success(`"${item.name}" saved`) })
+      .catch(() => toast.error('Could not save item'))
     setModal(null)
     setModalFields({ name: '', store: '', price: '', category: 'Fashion', note: '' })
-    toast.success(`"${f.name}" saved to your list`)
   }
   const saveRec = (rec: { name: string; store: string; price: number; category: Category }, rid: string) => {
     if (savedRecIds.has(rid)) return
     setSavedRecIds(p => new Set([...p, rid]))
-    const id = nextId; setNextId(n => n+1)
-    setItems(p => [{ id, name: rec.name, store: rec.store, price: rec.price, sale_price: null, is_sale: false, is_new: true, is_pinned: false, is_saved: false, category: rec.category, note: 'from explore' }, ...p])
-    toast.success(`"${rec.name}" added to your saves`)
+    api<Item>('/api/items', 'POST', { name: rec.name, store: rec.store, price: rec.price, category: rec.category, note: 'from explore' })
+      .then(item => { setItems(p => [item, ...p]); toast.success(`"${item.name}" added`) })
+      .catch(() => toast.error('Could not save item'))
   }
-
-  const onDrop = (targetId: number) => {
+  const onDrop = (targetId: string) => {
     if (dragSrc === null || dragSrc === targetId) return
     setItems(prev => { const a=[...prev]; const si=a.findIndex(i=>i.id===dragSrc); const ti=a.findIndex(i=>i.id===targetId); const [m]=a.splice(si,1); a.splice(ti,0,m); return a })
     setDragSrc(null)
+    // Persist new positions (fire-and-forget)
+    setTimeout(() => {
+      setItems(curr => { curr.forEach((it, idx) => api(`/api/items/${it.id}`, 'PATCH', { position: idx }).catch(() => {})); return curr })
+    }, 0)
   }
 
-  // ── AI calls ──
+  // ── AI ──
   const loadRecs = useCallback(async () => {
     setLoadingRecs(true); setRecs([]); setSavedRecIds(new Set()); setRecsError(false)
     try {
-      const res = await fetch('/api/claude/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: items.slice(0,50), budget_max: budgetMax }) })
-      if (!res.ok) throw new Error('API error')
-      const data = await res.json()
-      setRecs(data.sections||[])
-      setRecSummary(data.taste_summary||'')
-    } catch {
-      setRecsError(true)
-      toast.error('Could not load recommendations. Check your API key.')
-    }
+      const data = await api<{ sections: RecSection[]; taste_summary: string }>('/api/claude/recommendations', 'POST', {
+        items: items.slice(0, 50).map(i => ({ name: i.name, store: i.store, price: i.price, is_sale: i.isSale, sale_price: i.salePrice, category: i.category })),
+        budget_max: budgetMax,
+      })
+      setRecs(data.sections || []); setRecSummary(data.taste_summary || '')
+    } catch { setRecsError(true); toast.error('Could not load recommendations.') }
     setLoadingRecs(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, budgetMax])
 
   const loadAesRecs = useCallback(async () => {
     setLoadingAes(true); setAesRecs([])
     const sel = AESTHETICS.filter(a => selectedAes.has(a.id))
     try {
-      const res = await fetch('/api/claude/aesthetics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aesthetics: sel.map(a=>`${a.name} (${a.desc})`).join('; '), budget_max: budgetMax }) })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setAesRecs(data.sections||[])
-    } catch {
-      toast.error('Could not load picks. Try again.')
-    }
+      const data = await api<{ sections: RecSection[] }>('/api/claude/aesthetics', 'POST', {
+        aesthetics: sel.map(a => `${a.name} (${a.desc})`).join('; '), budget_max: budgetMax,
+      })
+      setAesRecs(data.sections || [])
+    } catch { toast.error('Could not load picks.') }
     setLoadingAes(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAes, budgetMax])
 
   const fetchFromUrl = useCallback(async () => {
     if (!urlInput.trim()) return
     setUrlStatus({ type: 'loading', msg: 'Reading the page…' })
     try {
-      const res = await fetch('/api/claude/extract-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: urlInput }) })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
+      const data = await api<{ name: string; store: string; price: number; category: Category }>('/api/claude/extract-url', 'POST', { url: urlInput })
       setModalFields({ name: data.name||'', store: data.store||'', price: String(data.price||''), category: data.category||'Fashion', note: '' })
       setUrlStatus({ type: 'ok', msg: 'Done — review and save.' })
-    } catch {
-      setUrlStatus({ type: 'err', msg: 'Could not extract. Fill in manually.' })
-    }
+    } catch { setUrlStatus({ type: 'err', msg: 'Could not extract. Fill in manually.' }) }
   }, [urlInput])
 
   // ── Computed ──
   const cats: Record<string,number> = {}; const stores: Record<string,number> = {}
-  items.forEach(i => { cats[i.category]=(cats[i.category]||0)+1; stores[i.store]=(stores[i.store]||0)+1 })
+  items.forEach(i => { cats[i.category]=(cats[i.category]||0)+1; if(i.store) stores[i.store]=(stores[i.store]||0)+1 })
   const topCats   = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0])
   const topStores = Object.entries(stores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0])
   const viewingCol      = viewingColId ? collections.find(c => c.id === viewingColId) : null
@@ -187,7 +222,18 @@ export default function WantApp() {
 
   const themeIcon = theme === 'dark' ? 'moon' : theme === 'light' ? 'sun' : isDark ? 'moon' : 'sun'
   const nextTheme: Theme = theme === 'auto' ? (isDark ? 'light' : 'dark') : theme === 'dark' ? 'light' : 'auto'
-  const cardGrid = 'want-grid' // CSS class defined in globals.css
+  const cardGrid = 'want-grid'
+
+  // ── Loading / auth gates ──
+  if (sessionLoading || (!session && typeof window !== 'undefined')) {
+    return (
+      <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontFamily: font.display, fontSize: 28, fontWeight: 800, letterSpacing: '-1.5px', color: colors.text, opacity: 0.5 }}>
+          WANT<span style={{ color: colors.pink }}>*</span>
+        </span>
+      </div>
+    )
+  }
 
   const navItem = (p: PageTab, icon: string, label: string) => (
     <div key={p} onClick={() => setPage(p)} role="button" tabIndex={0} onKeyDown={e => e.key==='Enter' && setPage(p)}
@@ -234,7 +280,7 @@ export default function WantApp() {
         {/* ── BODY ── */}
         <div className="main-body" style={{ display:'flex', flex:1, minHeight:0 }}>
 
-          {/* ── SIDEBAR (hidden on mobile) ── */}
+          {/* ── SIDEBAR ── */}
           <aside className="sidebar" style={{ width:220, borderRight:`1px solid ${colors.border}`, background:colors.card, flexShrink:0, padding:'20px 12px', flexDirection:'column' }}>
             <nav aria-label="Main navigation">
               {navItem('saves', 'bookmark', 'My Saves')}
@@ -246,9 +292,9 @@ export default function WantApp() {
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.8px', textTransform:'uppercase', color:colors.text3, marginBottom:12 }}>Overview</div>
               {[
                 { val: items.length, lbl: 'Total saves' },
-                { val: `$${items.reduce((s,i)=>s+(i.is_sale?i.sale_price!:i.price),0).toLocaleString()}`, lbl: 'Total value' },
-                { val: items.filter(i=>i.is_saved).length, lbl: 'Favourited' },
-                { val: items.filter(i=>i.is_sale).length, lbl: 'On sale' },
+                { val: `$${items.reduce((s,i)=>s+(i.isSale?i.salePrice!:i.price),0).toLocaleString()}`, lbl: 'Total value' },
+                { val: items.filter(i=>i.isSaved).length, lbl: 'Favourited' },
+                { val: items.filter(i=>i.isSale).length, lbl: 'On sale' },
               ].map(st => (
                 <div key={st.lbl} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${colors.border}` }}>
                   <span style={{ fontSize:12, color:colors.text3 }}>{st.lbl}</span>
@@ -258,11 +304,13 @@ export default function WantApp() {
             </div>
 
             <div style={{ marginTop:'auto', padding:'16px 4px 0', borderTop:`1px solid ${colors.border}` }}>
-              <div style={{ fontSize:12, color:colors.text3, lineHeight:1.6 }}>
-                <span style={{ display:'block', fontWeight:600, color:colors.text, marginBottom:2 }} suppressHydrationWarning>{mounted ? getGreeting() : 'Welcome'}</span>
-                <span suppressHydrationWarning>{mounted ? (isDark ? '🌙 Night mode' : '☀️ Day mode') : ''}</span><br />
-                <span style={{ fontSize:11 }}>Switches at 8pm & 7am</span>
+              <div style={{ fontSize:12, color:colors.text3, lineHeight:1.6, marginBottom:12 }}>
+                <span style={{ display:'block', fontWeight:600, color:colors.text, marginBottom:2 }} suppressHydrationWarning>{mounted ? getGreeting() : 'Welcome'}{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''}</span>
+                <span suppressHydrationWarning>{mounted ? (isDark ? '🌙 Night mode' : '☀️ Day mode') : ''}</span>
               </div>
+              <button onClick={() => signOut().then(() => router.push('/auth/login'))} style={{ ...btn('ghost'), fontSize:12, width:'100%', justifyContent:'center' }}>
+                Sign out
+              </button>
             </div>
           </aside>
 
@@ -274,14 +322,10 @@ export default function WantApp() {
               <div className="animate-fade-in">
                 <div className="page-pad" style={{ padding:`${space[4]}px 28px`, borderBottom:`1px solid ${colors.border}`, background:colors.card, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, background:colors.bg, border:`1px solid ${colors.border2}`, borderRadius:radius.md, padding:'8px 14px', flex:'1 1 220px' }}>
-                    <Icon name="search" />
-                    <input
-                      value={search} onChange={e=>setSearch(e.target.value)}
-                      placeholder="Search your saves…"
-                      aria-label="Search saved items"
-                      style={{ border:'none', outline:'none', background:'transparent', fontFamily:font.body, fontSize:13, color:colors.text, width:'100%' }}
-                    />
-                    {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:colors.text3, padding:0 }} aria-label="Clear search"><Icon name="x" /></button>}
+                    <Icon name="search" size={15} style={{ color: colors.text3 }} />
+                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search your saves…" aria-label="Search saved items"
+                      style={{ border:'none', outline:'none', background:'transparent', fontFamily:font.body, fontSize:13, color:colors.text, width:'100%' }} />
+                    {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:colors.text3, padding:0 }} aria-label="Clear search"><Icon name="x" size={14} /></button>}
                   </div>
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                     {([['all','All'],['sale','On sale'],['new','New'],['under100','Under $100'],['saved','Favourited']] as [FilterType,string][]).map(([f,l]) => (
@@ -294,8 +338,8 @@ export default function WantApp() {
                   {['all','Fashion','Home','Beauty','Tech'].map(c => tabItem(c, c==='all'?'All':c, catTab, setCatTab))}
                 </div>
 
-                <div className="page-pad" style={{ display:'flex', gap:12, padding:`${space[4]}px 28px`, borderBottom:`1px solid ${colors.border}`, overflowX:'auto' }} aria-label="Summary statistics">
-                  {[{val:statItems.length,lbl:'saves'},{val:`$${totalVal.toLocaleString()}`,lbl:'total value'},{val:statItems.filter(i=>i.is_saved).length,lbl:'favourited'},{val:statItems.filter(i=>i.is_sale).length,lbl:'on sale'}].map(st => (
+                <div className="page-pad" style={{ display:'flex', gap:12, padding:`${space[4]}px 28px`, borderBottom:`1px solid ${colors.border}`, overflowX:'auto' }}>
+                  {[{val:statItems.length,lbl:'saves'},{val:`$${totalVal.toLocaleString()}`,lbl:'total value'},{val:statItems.filter(i=>i.isSaved).length,lbl:'favourited'},{val:statItems.filter(i=>i.isSale).length,lbl:'on sale'}].map(st => (
                     <div key={st.lbl} style={{ background:colors.card, borderRadius:radius.md, border:`1px solid ${colors.border}`, padding:'10px 18px', flexShrink:0 }}>
                       <div style={{ fontSize:18, fontWeight:700, fontFamily:font.display, color:colors.text }}>{st.val}</div>
                       <div style={{ fontSize:11, color:colors.text3, marginTop:2, textTransform:'uppercase', letterSpacing:'.5px' }}>{st.lbl}</div>
@@ -304,25 +348,27 @@ export default function WantApp() {
                 </div>
 
                 <div className="page-pad" style={{ padding:`${space[6]}px 28px` }}>
-                  {pinnedItems.length > 0 && (
-                    <>
-                      <SectionHead label="Pinned" />
-                      <div className={`${cardGrid} animate-fade-in`} style={{ marginBottom:32 }}>
-                        {pinnedItems.map(item => (
-                          <ProductCard key={item.id} item={item} collections={collections} isDragging={dragSrc===item.id} onDragStart={() => setDragSrc(item.id)} onDragEnd={() => setDragSrc(null)} onDrop={() => onDrop(item.id)} onTogglePin={() => togglePin(item.id)} onToggleSaved={() => toggleSaved(item.id)} onToggleCollection={colId => toggleInCol(colId, item.id)} onNewCollection={newColFor} onRemove={() => removeItem(item.id)} />
-                        ))}
-                      </div>
-                      <SectionHead label="All saves" />
-                    </>
-                  )}
-                  {boardItems.length === 0 && pinnedItems.length === 0
-                    ? <EmptyState icon="bookmark" title={search?`No results for "${search}"`:'Nothing saved yet'} subtitle={search?'Try a different search.':'Add items using the button above.'} />
-                    : <div className={cardGrid}>
-                        {boardItems.map(item => (
-                          <ProductCard key={item.id} item={item} collections={collections} isDragging={dragSrc===item.id} onDragStart={() => setDragSrc(item.id)} onDragEnd={() => setDragSrc(null)} onDrop={() => onDrop(item.id)} onTogglePin={() => togglePin(item.id)} onToggleSaved={() => toggleSaved(item.id)} onToggleCollection={colId => toggleInCol(colId, item.id)} onNewCollection={newColFor} onRemove={() => removeItem(item.id)} />
-                        ))}
-                      </div>
-                  }
+                  {dataLoading ? <SkeletonGrid heights={[260,300,230,280,250,290]} /> : <>
+                    {pinnedItems.length > 0 && (
+                      <>
+                        <SectionHead label="Pinned" />
+                        <div className={cardGrid} style={{ marginBottom:32 }}>
+                          {pinnedItems.map(item => (
+                            <ProductCard key={item.id} item={item} collections={collections} isDragging={dragSrc===item.id} onDragStart={() => setDragSrc(item.id)} onDragEnd={() => setDragSrc(null)} onDrop={() => onDrop(item.id)} onTogglePin={() => togglePin(item.id)} onToggleSaved={() => toggleSaved(item.id)} onToggleCollection={colId => toggleInCol(colId, item.id)} onNewCollection={newColFor} onRemove={() => removeItem(item.id)} />
+                          ))}
+                        </div>
+                        <SectionHead label="All saves" />
+                      </>
+                    )}
+                    {boardItems.length === 0 && pinnedItems.length === 0
+                      ? <EmptyState icon="bookmark" title={search?`No results for "${search}"`:'Nothing saved yet'} subtitle={search?'Try a different search.':'Add your first item with the button above — paste a URL or fill it in manually.'} />
+                      : <div className={cardGrid}>
+                          {boardItems.map(item => (
+                            <ProductCard key={item.id} item={item} collections={collections} isDragging={dragSrc===item.id} onDragStart={() => setDragSrc(item.id)} onDragEnd={() => setDragSrc(null)} onDrop={() => onDrop(item.id)} onTogglePin={() => togglePin(item.id)} onToggleSaved={() => toggleSaved(item.id)} onToggleCollection={colId => toggleInCol(colId, item.id)} onNewCollection={newColFor} onRemove={() => removeItem(item.id)} />
+                          ))}
+                        </div>
+                    }
+                  </>}
                 </div>
               </div>
             )}
@@ -337,7 +383,7 @@ export default function WantApp() {
                         <h1 style={{ fontFamily:font.display, fontSize:22, fontWeight:800, color:colors.text, marginBottom:2 }}>Collections</h1>
                         <p style={{ fontSize:13, color:colors.text3 }}>Organise your saves into boards.</p>
                       </div>
-                      <button style={btn('primary')} onClick={() => { const n=prompt('Collection name:'); if(n?.trim()){setCollections(p=>[...p,{id:'c'+nextColId,name:n.trim(),itemIds:[]}]);setNextColId(x=>x+1);toast.success(`"${n.trim()}" created`)} }}>
+                      <button style={btn('primary')} onClick={() => newColFor()}>
                         <Icon name="plus" /> New
                       </button>
                     </div>
@@ -356,13 +402,13 @@ export default function WantApp() {
                                 }
                                 <div style={{ padding:'14px 16px 16px' }}>
                                   {renamingCol===col.id
-                                    ? <input value={renameVal} onChange={e=>setRenameVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){setCollections(p=>p.map(c=>c.id===col.id?{...c,name:renameVal.trim()||c.name}:c));setRenamingCol(null);toast.success('Collection renamed')}if(e.key==='Escape')setRenamingCol(null)}} onBlur={()=>{setCollections(p=>p.map(c=>c.id===col.id?{...c,name:renameVal.trim()||c.name}:c));setRenamingCol(null)}} autoFocus onClick={e=>e.stopPropagation()} aria-label="Rename collection" style={{ fontFamily:font.display, fontSize:15, fontWeight:700, color:colors.text, border:'none', outline:'none', borderBottom:`2px solid ${colors.violet}`, background:'transparent', width:'100%' }} />
+                                    ? <input value={renameVal} onChange={e=>setRenameVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){renameCol(col.id, renameVal);setRenamingCol(null)}if(e.key==='Escape')setRenamingCol(null)}} onBlur={()=>{renameCol(col.id, renameVal);setRenamingCol(null)}} autoFocus onClick={e=>e.stopPropagation()} aria-label="Rename collection" style={{ fontFamily:font.display, fontSize:15, fontWeight:700, color:colors.text, border:'none', outline:'none', borderBottom:`2px solid ${colors.violet}`, background:'transparent', width:'100%' }} />
                                     : <div style={{ fontFamily:font.display, fontSize:15, fontWeight:700, color:colors.text, marginBottom:4 }}>{col.name}</div>
                                   }
                                   <div style={{ fontSize:12, color:colors.text3, marginBottom:12 }}>{colItems.length} item{colItems.length!==1?'s':''}</div>
                                   <div style={{ display:'flex', gap:6 }}>
-                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();setRenamingCol(col.id);setRenameVal(col.name)}}><Icon name="pencil" /> Rename</button>
-                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();if(confirm('Delete collection?')){setCollections(p=>p.filter(c=>c.id!==col.id));toast.info('Collection deleted')}}}><Icon name="trash" /> Delete</button>
+                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();setRenamingCol(col.id);setRenameVal(col.name)}}><Icon name="pencil" size={13} /> Rename</button>
+                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();if(confirm('Delete collection?'))deleteCol(col.id)}}><Icon name="trash" size={13} /> Delete</button>
                                   </div>
                                 </div>
                               </div>
@@ -374,7 +420,7 @@ export default function WantApp() {
                 ) : (
                   <div className="page-pad" style={{ padding:`${space[6]}px 28px` }}>
                     <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24, paddingBottom:20, borderBottom:`1px solid ${colors.border}` }}>
-                      <button onClick={() => setViewingColId(null)} style={{ ...btn('ghost'), fontSize:13, padding:'7px 14px' }}><Icon name="arrow-left" /> Back</button>
+                      <button onClick={() => setViewingColId(null)} style={{ ...btn('ghost'), fontSize:13, padding:'7px 14px' }}><Icon name="arrow-left" size={14} /> Back</button>
                       <h1 style={{ fontFamily:font.display, fontSize:22, fontWeight:800, color:colors.text, flex:1 }}>{viewingCol?.name}</h1>
                     </div>
                     {viewingColItems.length === 0
@@ -385,10 +431,10 @@ export default function WantApp() {
                               <ItemImage item={item} height={140} />
                               <div style={{ padding:'10px 12px 12px' }}>
                                 <div style={{ fontSize:12, color:colors.text, marginBottom:2, fontWeight:500 }}>{item.name}</div>
-                                <div style={{ fontSize:13, fontFamily:font.display, fontWeight:700, color:colors.text2 }}>${item.is_sale?item.sale_price:item.price}</div>
+                                <div style={{ fontSize:13, fontFamily:font.display, fontWeight:700, color:colors.text2 }}>${item.isSale?item.salePrice:item.price}</div>
                               </div>
-                              <button onClick={() => {setCollections(p=>p.map(c=>c.id===viewingColId?{...c,itemIds:c.itemIds.filter(x=>x!==item.id)}:c));toast.info('Removed from collection')}} aria-label="Remove from collection" style={{ position:'absolute', top:8, right:8, width:24, height:24, borderRadius:6, background:colors.card, border:`1px solid ${colors.border}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, color:colors.text3 }}>
-                                <Icon name="x" />
+                              <button onClick={() => toggleInCol(viewingColId!, item.id)} aria-label="Remove from collection" style={{ position:'absolute', top:8, right:8, width:24, height:24, borderRadius:6, background:colors.card, border:`1px solid ${colors.border}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:colors.text3 }}>
+                                <Icon name="x" size={13} />
                               </button>
                             </div>
                           ))}
@@ -424,13 +470,13 @@ export default function WantApp() {
                             <span key={chip} style={{ padding:'4px 12px', borderRadius:radius.pill, background:colors.violetL, border:`1px solid ${colors.border2}`, fontSize:12, color:colors.violet, fontWeight:500 }}>{chip}</span>
                           ))}
                         </div>
-                        <button style={btn('primary')} onClick={loadRecs} disabled={loadingRecs} aria-busy={loadingRecs}>
+                        <button style={btn('primary')} onClick={loadRecs} disabled={loadingRecs || items.length === 0} aria-busy={loadingRecs}>
                           <Icon name={loadingRecs?'loader':'sparkles'} size={15} spin={loadingRecs} />
-                          {loadingRecs?'Analysing…':recs.length?'Refresh picks':'Generate picks'}
+                          {items.length === 0 ? 'Save some items first' : loadingRecs?'Analysing…':recs.length?'Refresh picks':'Generate picks'}
                         </button>
                       </div>
                       {loadingRecs && <SkeletonGrid heights={[220,245,200,230,210,240]} />}
-                      {!loadingRecs && recsError && <ErrorState title="Couldn't load picks" message="Check your Anthropic API key is set in Vercel environment variables." onRetry={loadRecs} />}
+                      {!loadingRecs && recsError && <ErrorState title="Couldn't load picks" message="Something went wrong reaching the AI. Try again." onRetry={loadRecs} />}
                       {!loadingRecs && !recsError && recs.map((sec,si) => (
                         <div key={si} style={{ marginBottom:32 }}>
                           <SectionHead label={sec.label} />
@@ -453,7 +499,7 @@ export default function WantApp() {
                             <div key={a.id} onClick={() => setSelectedAes(p=>{const n=new Set(p);sel?n.delete(a.id):n.add(a.id);return n})} role="checkbox" aria-checked={sel} tabIndex={0} onKeyDown={e=>e.key==='Enter'&&setSelectedAes(p=>{const n=new Set(p);sel?n.delete(a.id):n.add(a.id);return n})}
                               className="card-hover"
                               style={{ borderRadius:radius.lg, overflow:'hidden', border:`${sel?2:1}px solid ${sel?colors.violet:colors.border}`, cursor:'pointer', background:colors.card, position:'relative' }}>
-                              {sel && <div style={{ position:'absolute', top:8, right:8, width:22, height:22, background:colors.violet, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:13, zIndex:2 }} aria-hidden="true"><Icon name="check" /></div>}
+                              {sel && <div style={{ position:'absolute', top:8, right:8, width:22, height:22, background:colors.violet, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', zIndex:2 }} aria-hidden="true"><Icon name="check" size={13} /></div>}
                               <div style={{ height:80, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, background:isDark?a.bgDark:a.bg }}>{a.emoji}</div>
                               <div style={{ padding:'10px 12px 14px' }}>
                                 <div style={{ fontSize:13, fontWeight:600, color:colors.text, marginBottom:3 }}>{a.name}</div>
@@ -547,7 +593,6 @@ export default function WantApp() {
         )}
       </div>
 
-      {/* ── TOAST NOTIFICATIONS ── */}
       <ToastContainer toasts={toasts} onDismiss={dismiss} isDark={isDark} />
     </>
   )

@@ -151,9 +151,17 @@ export function unsplashUrl(photoId: string, w: number, h: number): string {
   return `https://images.unsplash.com/photo-${photoId}?w=${w}&h=${h}&fit=crop&crop=center&auto=format&q=80`
 }
 
-export function getPhotoId(category: string, id: number): string {
+// Stable numeric hash from any string (for picking photos/heights per item)
+export function strHash(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0 }
+  return Math.abs(h)
+}
+
+export function getPhotoId(category: string, seed: number | string): string {
   const ids = PHOTO_IDS[category] || PHOTO_IDS.Other
-  return ids[id % ids.length]
+  const n = typeof seed === 'string' ? strHash(seed) : seed
+  return ids[n % ids.length]
 }
 
 export function isDarkHour(): boolean {
