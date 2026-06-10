@@ -1,4 +1,5 @@
 'use client'
+import { Icon } from '@/components/ui/Icon'
 import { useState, useCallback, useEffect } from 'react'
 import { btn, pill, inp, lbl, colors, radius, space, font, isDarkHour, getGreeting, AESTHETICS } from '@/lib/tokens'
 import { INITIAL_ITEMS, INITIAL_COLLECTIONS } from '@/lib/data'
@@ -51,8 +52,9 @@ export default function WantApp() {
   const [theme, setTheme] = useState<Theme>('auto')
 
   // ── Time-based theme ──
-  // We defer all theme logic to the client to avoid hydration mismatches.
-  // The server always renders light mode; the browser corrects it instantly.
+  // The inline script in layout.tsx sets data-theme before first paint.
+  // This effect syncs React state with what the DOM already has,
+  // so there's no flash and no hydration mismatch.
   useEffect(() => {
     setMounted(true)
     const apply = () => {
@@ -64,9 +66,6 @@ export default function WantApp() {
     const t = setInterval(apply, 60_000)
     return () => clearInterval(t)
   }, [theme])
-
-  // Suppress theme-sensitive rendering until mounted on client
-  if (!mounted) return null
 
   // ── Derived state ──
   const filteredItems = items.filter(i => {
@@ -193,7 +192,7 @@ export default function WantApp() {
   const navItem = (p: PageTab, icon: string, label: string) => (
     <div key={p} onClick={() => setPage(p)} role="button" tabIndex={0} onKeyDown={e => e.key==='Enter' && setPage(p)}
       style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', cursor:'pointer', borderRadius:radius.md, color:page===p?colors.text:colors.text3, background:page===p?colors.bg3:'transparent', fontWeight:page===p?600:400, fontSize:14, marginBottom:2, transition:'all 150ms ease' }}>
-      <i className={`ti ti-${icon}`} style={{ fontSize:17 }} aria-hidden="true" />{label}
+      <Icon name={icon} size={17} />{label}
     </div>
   )
 
@@ -223,12 +222,12 @@ export default function WantApp() {
             WANT<span style={{ color:colors.pink }}>*</span>
           </span>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <button onClick={() => setTheme(nextTheme)} style={{ ...btn('ghost'), padding:'7px 12px', gap:5 }} aria-label={`Switch theme, current: ${theme}`}>
-              <i className={`ti ti-${themeIcon}`} style={{ fontSize:16 }} aria-hidden="true" />
-              <span style={{ fontSize:11, color:colors.text3 }}>{theme==='auto'?'Auto':theme==='dark'?'Dark':'Light'}</span>
+            <button onClick={() => setTheme(nextTheme)} style={{ ...btn('ghost'), padding:'7px 12px', gap:5 }} aria-label={`Switch theme, current: ${theme}`} suppressHydrationWarning>
+              <Icon name={mounted ? themeIcon : 'sun'} size={16} />
+              <span style={{ fontSize:11, color:colors.text3 }} suppressHydrationWarning>{mounted ? (theme==='auto'?'Auto':theme==='dark'?'Dark':'Light') : 'Auto'}</span>
             </button>
-            <button style={btn('secondary')} onClick={() => setModal('url')}><i className="ti ti-link" style={{ fontSize:15 }} aria-hidden="true" /> Import URL</button>
-            <button style={btn('primary')} onClick={() => setModal('manual')}><i className="ti ti-plus" style={{ fontSize:15 }} aria-hidden="true" /> Add item</button>
+            <button style={btn('secondary')} onClick={() => setModal('url')}><Icon name="link" /> Import URL</button>
+            <button style={btn('primary')} onClick={() => setModal('manual')}><Icon name="plus" /> Add item</button>
           </div>
         </header>
 
@@ -260,8 +259,8 @@ export default function WantApp() {
 
             <div style={{ marginTop:'auto', padding:'16px 4px 0', borderTop:`1px solid ${colors.border}` }}>
               <div style={{ fontSize:12, color:colors.text3, lineHeight:1.6 }}>
-                <span style={{ display:'block', fontWeight:600, color:colors.text, marginBottom:2 }}>{getGreeting()}</span>
-                {isDark ? '🌙 Night mode' : '☀️ Day mode'}<br />
+                <span style={{ display:'block', fontWeight:600, color:colors.text, marginBottom:2 }} suppressHydrationWarning>{mounted ? getGreeting() : 'Welcome'}</span>
+                <span suppressHydrationWarning>{mounted ? (isDark ? '🌙 Night mode' : '☀️ Day mode') : ''}</span><br />
                 <span style={{ fontSize:11 }}>Switches at 8pm & 7am</span>
               </div>
             </div>
@@ -275,14 +274,14 @@ export default function WantApp() {
               <div className="animate-fade-in">
                 <div className="page-pad" style={{ padding:`${space[4]}px 28px`, borderBottom:`1px solid ${colors.border}`, background:colors.card, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, background:colors.bg, border:`1px solid ${colors.border2}`, borderRadius:radius.md, padding:'8px 14px', flex:'1 1 220px' }}>
-                    <i className="ti ti-search" style={{ color:colors.text3, fontSize:15 }} aria-hidden="true" />
+                    <Icon name="search" />
                     <input
                       value={search} onChange={e=>setSearch(e.target.value)}
                       placeholder="Search your saves…"
                       aria-label="Search saved items"
                       style={{ border:'none', outline:'none', background:'transparent', fontFamily:font.body, fontSize:13, color:colors.text, width:'100%' }}
                     />
-                    {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:colors.text3, padding:0 }} aria-label="Clear search"><i className="ti ti-x" /></button>}
+                    {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:colors.text3, padding:0 }} aria-label="Clear search"><Icon name="x" /></button>}
                   </div>
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                     {([['all','All'],['sale','On sale'],['new','New'],['under100','Under $100'],['saved','Favourited']] as [FilterType,string][]).map(([f,l]) => (
@@ -339,7 +338,7 @@ export default function WantApp() {
                         <p style={{ fontSize:13, color:colors.text3 }}>Organise your saves into boards.</p>
                       </div>
                       <button style={btn('primary')} onClick={() => { const n=prompt('Collection name:'); if(n?.trim()){setCollections(p=>[...p,{id:'c'+nextColId,name:n.trim(),itemIds:[]}]);setNextColId(x=>x+1);toast.success(`"${n.trim()}" created`)} }}>
-                        <i className="ti ti-plus" aria-hidden="true" /> New
+                        <Icon name="plus" /> New
                       </button>
                     </div>
                     <div className="page-pad" style={{ padding:`${space[6]}px 28px`, display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:16 }}>
@@ -362,8 +361,8 @@ export default function WantApp() {
                                   }
                                   <div style={{ fontSize:12, color:colors.text3, marginBottom:12 }}>{colItems.length} item{colItems.length!==1?'s':''}</div>
                                   <div style={{ display:'flex', gap:6 }}>
-                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();setRenamingCol(col.id);setRenameVal(col.name)}}><i className="ti ti-pencil" aria-hidden="true" /> Rename</button>
-                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();if(confirm('Delete collection?')){setCollections(p=>p.filter(c=>c.id!==col.id));toast.info('Collection deleted')}}}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
+                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();setRenamingCol(col.id);setRenameVal(col.name)}}><Icon name="pencil" /> Rename</button>
+                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();if(confirm('Delete collection?')){setCollections(p=>p.filter(c=>c.id!==col.id));toast.info('Collection deleted')}}}><Icon name="trash" /> Delete</button>
                                   </div>
                                 </div>
                               </div>
@@ -375,7 +374,7 @@ export default function WantApp() {
                 ) : (
                   <div className="page-pad" style={{ padding:`${space[6]}px 28px` }}>
                     <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24, paddingBottom:20, borderBottom:`1px solid ${colors.border}` }}>
-                      <button onClick={() => setViewingColId(null)} style={{ ...btn('ghost'), fontSize:13, padding:'7px 14px' }}><i className="ti ti-arrow-left" aria-hidden="true" /> Back</button>
+                      <button onClick={() => setViewingColId(null)} style={{ ...btn('ghost'), fontSize:13, padding:'7px 14px' }}><Icon name="arrow-left" /> Back</button>
                       <h1 style={{ fontFamily:font.display, fontSize:22, fontWeight:800, color:colors.text, flex:1 }}>{viewingCol?.name}</h1>
                     </div>
                     {viewingColItems.length === 0
@@ -389,7 +388,7 @@ export default function WantApp() {
                                 <div style={{ fontSize:13, fontFamily:font.display, fontWeight:700, color:colors.text2 }}>${item.is_sale?item.sale_price:item.price}</div>
                               </div>
                               <button onClick={() => {setCollections(p=>p.map(c=>c.id===viewingColId?{...c,itemIds:c.itemIds.filter(x=>x!==item.id)}:c));toast.info('Removed from collection')}} aria-label="Remove from collection" style={{ position:'absolute', top:8, right:8, width:24, height:24, borderRadius:6, background:colors.card, border:`1px solid ${colors.border}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, color:colors.text3 }}>
-                                <i className="ti ti-x" aria-hidden="true" />
+                                <Icon name="x" />
                               </button>
                             </div>
                           ))}
@@ -407,7 +406,7 @@ export default function WantApp() {
                   {(['foryou','aesthetics'] as ExploreTab[]).map(t => (
                     <div key={t} onClick={() => setExTab(t)} role="tab" tabIndex={0} aria-selected={exTab===t} onKeyDown={e=>e.key==='Enter'&&setExTab(t)}
                       style={{ padding:'14px 18px', fontSize:13, color:exTab===t?colors.text:colors.text3, cursor:'pointer', borderBottom:exTab===t?`2px solid ${colors.text}`:'2px solid transparent', fontWeight:exTab===t?600:400, display:'flex', alignItems:'center', gap:6, transition:'all 150ms ease' }}>
-                      <i className={`ti ti-${t==='foryou'?'sparkles':'palette'}`} style={{ fontSize:15 }} aria-hidden="true" />{t==='foryou'?'For You':'Aesthetics'}
+                      <Icon name={t==='foryou'?'sparkles':'palette'} size={15} />{t==='foryou'?'For You':'Aesthetics'}
                     </div>
                   ))}
                 </div>
@@ -426,7 +425,7 @@ export default function WantApp() {
                           ))}
                         </div>
                         <button style={btn('primary')} onClick={loadRecs} disabled={loadingRecs} aria-busy={loadingRecs}>
-                          <i className={`ti ti-${loadingRecs?'loader':'sparkles'} ${loadingRecs?'animate-spin':''}`} style={{ fontSize:15 }} aria-hidden="true" />
+                          <Icon name={loadingRecs?'loader':'sparkles'} size={15} spin={loadingRecs} />
                           {loadingRecs?'Analysing…':recs.length?'Refresh picks':'Generate picks'}
                         </button>
                       </div>
@@ -454,7 +453,7 @@ export default function WantApp() {
                             <div key={a.id} onClick={() => setSelectedAes(p=>{const n=new Set(p);sel?n.delete(a.id):n.add(a.id);return n})} role="checkbox" aria-checked={sel} tabIndex={0} onKeyDown={e=>e.key==='Enter'&&setSelectedAes(p=>{const n=new Set(p);sel?n.delete(a.id):n.add(a.id);return n})}
                               className="card-hover"
                               style={{ borderRadius:radius.lg, overflow:'hidden', border:`${sel?2:1}px solid ${sel?colors.violet:colors.border}`, cursor:'pointer', background:colors.card, position:'relative' }}>
-                              {sel && <div style={{ position:'absolute', top:8, right:8, width:22, height:22, background:colors.violet, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:13, zIndex:2 }} aria-hidden="true"><i className="ti ti-check" /></div>}
+                              {sel && <div style={{ position:'absolute', top:8, right:8, width:22, height:22, background:colors.violet, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:13, zIndex:2 }} aria-hidden="true"><Icon name="check" /></div>}
                               <div style={{ height:80, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, background:isDark?a.bgDark:a.bg }}>{a.emoji}</div>
                               <div style={{ padding:'10px 12px 14px' }}>
                                 <div style={{ fontSize:13, fontWeight:600, color:colors.text, marginBottom:3 }}>{a.name}</div>
@@ -467,7 +466,7 @@ export default function WantApp() {
                       <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:32, flexWrap:'wrap' }}>
                         <span style={{ fontSize:13, color:colors.text3 }} aria-live="polite">{selectedAes.size===0?'Select at least one':<><strong style={{ color:colors.text }}>{selectedAes.size}</strong> selected</>}</span>
                         <button style={btn('primary')} onClick={loadAesRecs} disabled={selectedAes.size===0||loadingAes} aria-busy={loadingAes}>
-                          <i className={`ti ti-${loadingAes?'loader':'sparkles'} ${loadingAes?'animate-spin':''}`} style={{ fontSize:15 }} aria-hidden="true" />
+                          <Icon name={loadingAes?'loader':'sparkles'} size={15} spin={loadingAes} />
                           {loadingAes?'Finding pieces…':'Shop this vibe'}
                         </button>
                       </div>
@@ -493,7 +492,7 @@ export default function WantApp() {
           {([['saves','bookmark','Saves'],['collections','folder','Collections'],['explore','sparkles','Explore']] as [PageTab,string,string][]).map(([p,icon,label]) => (
             <button key={p} onClick={() => setPage(p)} aria-current={page===p?'page':undefined}
               style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', padding:'4px 16px', color:page===p?colors.text:colors.text3, fontFamily:font.body, fontSize:11, fontWeight:page===p?600:400 }}>
-              <i className={`ti ti-${icon}`} style={{ fontSize:20 }} aria-hidden="true" />
+              <Icon name={icon} size={20} />
               {label}
             </button>
           ))}
@@ -512,7 +511,7 @@ export default function WantApp() {
                   <div style={{ display:'flex', gap:8 }}>
                     <input id="url-input" value={urlInput} onChange={e=>setUrlInput(e.target.value)} placeholder="https://…" style={{ ...inp, flex:1 }} />
                     <button onClick={fetchFromUrl} disabled={urlStatus.type==='loading'} style={{ ...btn('primary'), borderRadius:radius.md, padding:'10px 16px', fontSize:12, whiteSpace:'nowrap' }}>
-                      <i className={`ti ti-${urlStatus.type==='loading'?'loader animate-spin':'sparkles'}`} aria-hidden="true" /> Extract
+                      <Icon name={urlStatus.type==='loading'?'loader':'sparkles'} spin={urlStatus.type==='loading'} /> Extract
                     </button>
                   </div>
                   {urlStatus.type !== 'idle' && (

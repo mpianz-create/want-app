@@ -1,4 +1,5 @@
 'use client'
+import { Icon } from './Icon'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { colors, radius, font, space } from '@/lib/tokens'
 
@@ -52,9 +53,9 @@ export function useToast() {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const VARIANT_STYLES: Record<ToastVariant, { bg: string; color: string; icon: string; border: string }> = {
-  success: { bg: '#F0FFF4', color: '#166534', icon: 'ti-circle-check',   border: 'rgba(22,101,52,0.2)' },
-  error:   { bg: '#FFF0F0', color: '#991B1B', icon: 'ti-alert-circle',   border: 'rgba(153,27,27,0.2)' },
-  info:    { bg: colors.card, color: colors.text, icon: 'ti-info-circle', border: colors.border2 },
+  success: { bg: '#F0FFF4', color: '#166534', icon: 'circle-check',   border: 'rgba(22,101,52,0.2)' },
+  error:   { bg: '#FFF0F0', color: '#991B1B', icon: 'alert-circle',   border: 'rgba(153,27,27,0.2)' },
+  info:    { bg: colors.card, color: colors.text, icon: 'info-circle', border: colors.border2 },
 }
 
 const DARK_VARIANT_STYLES: Record<ToastVariant, { bg: string; color: string; border: string }> = {
@@ -92,14 +93,14 @@ function ToastMessage({ toast, onDismiss, isDark }: { toast: ToastItem; onDismis
         cursor: 'default',
       }}
     >
-      <i className={`ti ${icon}`} style={{ fontSize: 16, flexShrink: 0 }} aria-hidden="true" />
+      <Icon name={icon} size={16} />
       <span style={{ flex: 1 }}>{toast.message}</span>
       <button
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss notification"
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.6, padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}
       >
-        <i className="ti ti-x" style={{ fontSize: 14 }} aria-hidden="true" />
+        <Icon name="x" />
       </button>
     </div>
   )

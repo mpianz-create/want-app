@@ -36,8 +36,8 @@ export const space = {
 } as const
 
 export const font = {
-  display: "'Syne', sans-serif",
-  body:    "'Space Grotesk', sans-serif",
+  display: "var(--font-syne), sans-serif",
+  body:    "var(--font-space-grotesk), sans-serif",
 } as const
 
 // Animation durations — mirrors CSS @theme

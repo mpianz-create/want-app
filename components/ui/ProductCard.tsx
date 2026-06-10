@@ -1,4 +1,5 @@
 'use client'
+import { Icon } from './Icon'
 import { useState } from 'react'
 import { btn, iconBtn, colors, radius, space, font, CARD_HEIGHTS } from '@/lib/tokens'
 import { ItemImage } from './ItemImage'
@@ -55,11 +56,11 @@ export function ProductCard({ item, collections, isDragging, onDragStart, onDrag
             </span>
 
             <div style={{ display: 'flex', gap: 4, position: 'relative' }}>
-              <button style={iconBtn(item.is_pinned, colors.violet)} onClick={onTogglePin}><i className="ti ti-pin" /></button>
-              <button style={iconBtn(item.is_saved, colors.pink)} onClick={onToggleSaved}><i className="ti ti-heart" /></button>
+              <button style={iconBtn(item.is_pinned, colors.violet)} onClick={onTogglePin} aria-label={item.is_pinned ? 'Unpin item' : 'Pin to top'} aria-pressed={item.is_pinned}><Icon name="pin" /></button>
+              <button style={iconBtn(item.is_saved, colors.pink)} onClick={onToggleSaved} aria-label={item.is_saved ? 'Remove from favourites' : 'Add to favourites'} aria-pressed={item.is_saved}><Icon name="heart" /></button>
 
               <div style={{ position: 'relative' }}>
-                <button style={iconBtn(inCols.length > 0, colors.violet)} onClick={() => setMenuOpen(v => !v)}><i className="ti ti-folder-plus" /></button>
+                <button style={iconBtn(inCols.length > 0, colors.violet)} onClick={() => setMenuOpen(v => !v)} aria-label="Add to collection" aria-expanded={menuOpen} aria-haspopup="listbox"><Icon name="folder-plus" /></button>
                 {menuOpen && (
                   <div
                     style={{ position: 'absolute', bottom: 36, right: 0, background: colors.card, border: `1px solid ${colors.border2}`, borderRadius: radius.lg, padding: space[1], zIndex: 50, minWidth: 200, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
@@ -71,19 +72,19 @@ export function ProductCard({ item, collections, isDragging, onDragStart, onDrag
                         onClick={() => { onToggleCollection(c.id); setMenuOpen(false) }}
                         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, color: inCols.find(x => x.id === c.id) ? colors.violet : colors.text, fontWeight: inCols.find(x => x.id === c.id) ? 600 : 400 }}
                       >
-                        <i className={`ti ti-${inCols.find(x => x.id === c.id) ? 'check' : 'folder'}`} /> {c.name}
+                        <Icon name={inCols.find(x => x.id === c.id) ? 'check' : 'folder'} /> {c.name}
                       </div>
                     ))}
                     <div style={{ borderTop: `1px solid ${colors.border}`, marginTop: 4, paddingTop: 4 }}>
                       <div onClick={() => { onNewCollection(item.id); setMenuOpen(false) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, color: colors.lavender }}>
-                        <i className="ti ti-plus" /> New collection
+                        <Icon name="plus" /> New collection
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              <button style={iconBtn()} onClick={onRemove}><i className="ti ti-trash" /></button>
+              <button style={iconBtn()} onClick={onRemove} aria-label="Remove item"><Icon name="trash" /></button>
             </div>
           </div>
         </div>

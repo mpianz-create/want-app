@@ -11,7 +11,7 @@
   --color-card:     #FFFFFF;
   --color-text:     #1A1A1A;
   --color-text2:    #555550;
-  --color-text3:    #888880;
+  --color-text3:    #6B6B65; /* bumped from #888880 — passes WCAG AA 4.5:1 on white */
   --color-border:   rgba(0,0,0,0.08);
   --color-border2:  rgba(0,0,0,0.13);
   --color-violet:   #6600EE;
@@ -22,8 +22,8 @@
   --color-lavender: #7744BB;
 
   /* Typography */
-  --font-display: 'Syne', sans-serif;
-  --font-body:    'Space Grotesk', sans-serif;
+  --font-display: var(--font-syne), sans-serif;
+  --font-body:    var(--font-space-grotesk), sans-serif;
 
   /* Border radius */
   --radius-sm:   6px;
@@ -55,7 +55,7 @@
   --color-card:     #1A1A1A;
   --color-text:     #F0F0EE;
   --color-text2:    #AAAAAA;
-  --color-text3:    #666666;
+  --color-text3:    #8A8A8A; /* bumped from #666666 — passes WCAG AA on dark bg */
   --color-border:   rgba(255,255,255,0.08);
   --color-border2:  rgba(255,255,255,0.13);
   --color-violet:   #9966FF;
