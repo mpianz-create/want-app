@@ -46,11 +46,15 @@ export default function WantApp() {
   const [urlInput, setUrlInput] = useState('')
   const [urlStatus, setUrlStatus] = useState<{ type: 'idle'|'loading'|'ok'|'err'; msg: string }>({ type: 'idle', msg: '' })
 
+  const [mounted, setMounted] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const [theme, setTheme] = useState<Theme>('auto')
 
   // ── Time-based theme ──
+  // We defer all theme logic to the client to avoid hydration mismatches.
+  // The server always renders light mode; the browser corrects it instantly.
   useEffect(() => {
+    setMounted(true)
     const apply = () => {
       const dark = theme === 'dark' || (theme === 'auto' && isDarkHour())
       setIsDark(dark)
@@ -60,6 +64,9 @@ export default function WantApp() {
     const t = setInterval(apply, 60_000)
     return () => clearInterval(t)
   }, [theme])
+
+  // Suppress theme-sensitive rendering until mounted on client
+  if (!mounted) return null
 
   // ── Derived state ──
   const filteredItems = items.filter(i => {
