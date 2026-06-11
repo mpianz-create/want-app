@@ -56,6 +56,11 @@ export function ProductCard({ item, collections, isDragging, onDragStart, onDrag
             </span>
 
             <div style={{ display: 'flex', gap: 4, position: 'relative' }}>
+              {item.productUrl && (
+                <a href={item.productUrl} target="_blank" rel="noopener noreferrer" style={{ ...iconBtn(false, colors.violet), textDecoration: 'none' }} aria-label={`Open ${item.name} at ${item.store}`} onClick={e => e.stopPropagation()}>
+                  <Icon name="external-link" size={14} />
+                </a>
+              )}
               <button style={iconBtn(item.isPinned, colors.violet)} onClick={onTogglePin} aria-label={item.isPinned ? 'Unpin item' : 'Pin to top'} aria-pressed={item.isPinned}><Icon name="pin" /></button>
               <button style={iconBtn(item.isSaved, colors.pink)} onClick={onToggleSaved} aria-label={item.isSaved ? 'Remove from favourites' : 'Add to favourites'} aria-pressed={item.isSaved}><Icon name="heart" /></button>
 

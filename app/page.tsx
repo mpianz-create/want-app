@@ -56,7 +56,7 @@ export default function WantApp() {
   const [savedRecIds, setSavedRecIds] = useState<Set<string>>(new Set())
 
   const [modal, setModal] = useState<null | 'manual' | 'url'>(null)
-  const [modalFields, setModalFields] = useState({ name: '', store: '', price: '', category: 'Fashion' as Category, note: '' })
+  const [modalFields, setModalFields] = useState({ name: '', store: '', price: '', category: 'Fashion' as Category, note: '', imageUrl: null as string | null, productUrl: null as string | null })
   const [urlInput, setUrlInput] = useState('')
   const [urlStatus, setUrlStatus] = useState<{ type: 'idle'|'loading'|'ok'|'err'; msg: string }>({ type: 'idle', msg: '' })
 
@@ -152,11 +152,11 @@ export default function WantApp() {
     toast.info('Collection deleted')
   }
   const addItem = (f: typeof modalFields) => {
-    api<Item>('/api/items', 'POST', { name: f.name, store: f.store, price: parseFloat(f.price)||0, category: f.category, note: f.note })
+    api<Item>('/api/items', 'POST', { name: f.name, store: f.store, price: parseFloat(f.price)||0, category: f.category, note: f.note, imageUrl: f.imageUrl, productUrl: f.productUrl })
       .then(item => { setItems(p => [item, ...p]); toast.success(`"${item.name}" saved`) })
       .catch(() => toast.error('Could not save item'))
     setModal(null)
-    setModalFields({ name: '', store: '', price: '', category: 'Fashion', note: '' })
+    setModalFields({ name: '', store: '', price: '', category: 'Fashion', note: '', imageUrl: null, productUrl: null })
   }
   const saveRec = (rec: { name: string; store: string; price: number; category: Category }, rid: string) => {
     if (savedRecIds.has(rid)) return
@@ -206,9 +206,11 @@ export default function WantApp() {
     if (!urlInput.trim()) return
     setUrlStatus({ type: 'loading', msg: 'Reading the page…' })
     try {
-      const data = await api<{ name: string; store: string; price: number; category: Category }>('/api/claude/extract-url', 'POST', { url: urlInput })
-      setModalFields({ name: data.name||'', store: data.store||'', price: String(data.price||''), category: data.category||'Fashion', note: '' })
-      setUrlStatus({ type: 'ok', msg: 'Done — review and save.' })
+      const data = await api<{ name: string; store: string; price: number; category: Category; imageUrl: string | null; productUrl: string; confident: boolean }>('/api/claude/extract-url', 'POST', { url: urlInput })
+      setModalFields({ name: data.name||'', store: data.store||'', price: String(data.price||''), category: data.category||'Fashion', note: '', imageUrl: data.imageUrl, productUrl: data.productUrl })
+      setUrlStatus(data.confident
+        ? { type: 'ok', msg: data.imageUrl ? 'Got it — real photo included. Review and save.' : 'Details found — review and save.' }
+        : { type: 'ok', msg: 'Best guess from the URL — double-check the details.' })
     } catch { setUrlStatus({ type: 'err', msg: 'Could not extract. Fill in manually.' }) }
   }, [urlInput])
 
@@ -563,6 +565,13 @@ export default function WantApp() {
                   {urlStatus.type !== 'idle' && (
                     <div role="status" style={{ fontSize:12, marginTop:10, padding:'10px 14px', borderRadius:radius.md, background:urlStatus.type==='loading'?colors.violetL:urlStatus.type==='ok'?'rgba(0,150,80,0.1)':'rgba(220,0,0,0.08)', color:urlStatus.type==='ok'?'#166534':urlStatus.type==='err'?'#991B1B':colors.violet }}>
                       {urlStatus.msg}
+                    </div>
+                  )}
+                  {modalFields.imageUrl && (
+                    <div style={{ marginTop:12, display:'flex', alignItems:'center', gap:12, padding:10, border:`1px solid ${colors.border}`, borderRadius:radius.lg, background:colors.bg }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={modalFields.imageUrl} alt="Product preview" style={{ width:64, height:64, objectFit:'cover', borderRadius:radius.md, flexShrink:0 }} onError={() => setModalFields(f => ({ ...f, imageUrl: null }))} />
+                      <div style={{ fontSize:12, color:colors.text3, lineHeight:1.5 }}>Real product photo found.<br/>This will show on your card.</div>
                     </div>
                   )}
                   <div style={{ display:'flex', alignItems:'center', gap:12, margin:'20px 0', color:colors.text3, fontSize:12 }}>
