@@ -3,27 +3,55 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 
+export const maxDuration = 60 // scraping + extraction can exceed Vercel's 10s default
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // ── Fetch page HTML via ScraperAPI (handles bot-blocking), direct fetch as fallback ──
-async function fetchPageHtml(url: string): Promise<string | null> {
+async function scraperFetch(url: string, render: boolean): Promise<string | null> {
   const key = process.env.SCRAPER_API_KEY
+  if (!key) return null
   try {
-    if (key) {
-      const res = await fetch(
-        `https://api.scraperapi.com/?api_key=${key}&url=${encodeURIComponent(url)}`,
-        { signal: AbortSignal.timeout(25_000) }
-      )
-      if (res.ok) return await res.text()
-    }
-    // Fallback: direct fetch (works for stores that don't block)
+    const res = await fetch(
+      `https://api.scraperapi.com/?api_key=${key}&url=${encodeURIComponent(url)}${render ? '&render=true' : ''}`,
+      { signal: AbortSignal.timeout(render ? 45_000 : 20_000) }
+    )
+    if (res.ok) return await res.text()
+  } catch { /* fall through */ }
+  return null
+}
+
+async function directFetch(url: string): Promise<string | null> {
+  try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(8_000),
     })
     if (res.ok) return await res.text()
   } catch { /* fall through */ }
   return null
+}
+
+// Does this HTML actually contain product metadata, or just an empty app shell?
+function hasProductSignals(html: string): boolean {
+  return /og:image|application\/ld\+json|product:price/i.test(html)
+}
+
+async function fetchPageHtml(url: string): Promise<string | null> {
+  // Pass 1: fast scrape without JS rendering (1 credit)
+  let html = await scraperFetch(url, false)
+  if (html && hasProductSignals(html)) return html
+
+  // Pass 2: JS-rendered scrape for SPA storefronts (10 credits, slower)
+  const rendered = await scraperFetch(url, true)
+  if (rendered && hasProductSignals(rendered)) return rendered
+
+  // Pass 3: direct fetch for unblocked stores / missing API key
+  const direct = await directFetch(url)
+  if (direct && hasProductSignals(direct)) return direct
+
+  // Return whatever we got, even if thin — Claude can still try
+  return rendered || html || direct
 }
 
 // ── Pull the product metadata stores embed for Google/Pinterest ──
