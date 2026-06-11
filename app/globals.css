@@ -22,7 +22,7 @@
   --color-lavender: #7744BB;
 
   /* Typography */
-  --font-display: var(--font-syne), sans-serif;
+  --font-display: var(--font-instrument), serif;
   --font-body:    var(--font-space-grotesk), sans-serif;
 
   /* Border radius */

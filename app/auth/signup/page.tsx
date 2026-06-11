@@ -31,7 +31,7 @@ export default function SignupPage() {
     <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: 400, maxWidth: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <span style={{ fontFamily: font.display, fontSize: 32, fontWeight: 800, letterSpacing: '-1.5px', color: colors.text }}>
+          <span style={{ fontFamily: font.display, fontSize: 40, fontWeight: 400, letterSpacing: '-0.5px', color: colors.text }}>
             WANT<span style={{ color: colors.pink }}>*</span>
           </span>
           <p style={{ fontSize: 13, color: colors.text3, marginTop: 6 }}>Your wishlist, but make it fashion.</p>

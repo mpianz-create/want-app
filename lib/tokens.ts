@@ -36,7 +36,7 @@ export const space = {
 } as const
 
 export const font = {
-  display: "var(--font-syne), sans-serif",
+  display: "var(--font-instrument), serif",
   body:    "var(--font-space-grotesk), sans-serif",
 } as const
 

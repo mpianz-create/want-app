@@ -26,7 +26,7 @@ export function RecCard({ item, idx, saved, onSave }: Props) {
         <div style={{ fontSize: 13, color: colors.text, marginBottom: 4, lineHeight: 1.4, fontWeight: 500 }}>{item.name}</div>
         <div style={{ fontSize: 12, color: colors.text3, marginBottom: 10, fontStyle: 'italic', lineHeight: 1.5 }}>{item.why}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 15, fontWeight: 700, fontFamily: font.display, color: colors.text }}>~${item.price}</span>
+          <span style={{ fontSize: 15, fontWeight: 400, fontFamily: font.display, color: colors.text }}>~${item.price}</span>
           <button
             style={{ ...btn(saved ? 'ghost' : 'primary'), fontSize: 11, padding: '6px 14px', borderRadius: 20 }}
             onClick={onSave} disabled={saved}

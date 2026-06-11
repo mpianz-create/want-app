@@ -228,7 +228,7 @@ export default function WantApp() {
   if (sessionLoading || (!session && typeof window !== 'undefined')) {
     return (
       <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontFamily: font.display, fontSize: 28, fontWeight: 800, letterSpacing: '-1.5px', color: colors.text, opacity: 0.5 }}>
+        <span style={{ fontFamily: font.display, fontSize: 34, fontWeight: 400, letterSpacing: '-0.5px', color: colors.text, opacity: 0.5 }}>
           WANT<span style={{ color: colors.pink }}>*</span>
         </span>
       </div>
@@ -264,7 +264,7 @@ export default function WantApp() {
 
         {/* ── TOP NAV ── */}
         <header style={{ height:58, display:'flex', alignItems:'center', justifyContent:'space-between', padding:`0 ${space[7]}px`, borderBottom:`1px solid ${colors.border}`, background:colors.card, flexShrink:0 }}>
-          <span style={{ fontFamily:font.display, fontSize:22, fontWeight:800, letterSpacing:'-1px', color:colors.text }}>
+          <span style={{ fontFamily:font.display, fontSize:26, fontWeight: 400, letterSpacing:'-0.5px', color:colors.text }}>
             WANT<span style={{ color:colors.pink }}>*</span>
           </span>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -298,7 +298,7 @@ export default function WantApp() {
               ].map(st => (
                 <div key={st.lbl} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${colors.border}` }}>
                   <span style={{ fontSize:12, color:colors.text3 }}>{st.lbl}</span>
-                  <span style={{ fontSize:14, fontWeight:700, color:colors.text, fontFamily:font.display }}>{st.val}</span>
+                  <span style={{ fontSize:14, fontWeight: 400, color:colors.text, fontFamily:font.display }}>{st.val}</span>
                 </div>
               ))}
             </div>
@@ -341,7 +341,7 @@ export default function WantApp() {
                 <div className="page-pad" style={{ display:'flex', gap:12, padding:`${space[4]}px 28px`, borderBottom:`1px solid ${colors.border}`, overflowX:'auto' }}>
                   {[{val:statItems.length,lbl:'saves'},{val:`$${totalVal.toLocaleString()}`,lbl:'total value'},{val:statItems.filter(i=>i.isSaved).length,lbl:'favourited'},{val:statItems.filter(i=>i.isSale).length,lbl:'on sale'}].map(st => (
                     <div key={st.lbl} style={{ background:colors.card, borderRadius:radius.md, border:`1px solid ${colors.border}`, padding:'10px 18px', flexShrink:0 }}>
-                      <div style={{ fontSize:18, fontWeight:700, fontFamily:font.display, color:colors.text }}>{st.val}</div>
+                      <div style={{ fontSize:18, fontWeight: 400, fontFamily:font.display, color:colors.text }}>{st.val}</div>
                       <div style={{ fontSize:11, color:colors.text3, marginTop:2, textTransform:'uppercase', letterSpacing:'.5px' }}>{st.lbl}</div>
                     </div>
                   ))}
@@ -380,7 +380,7 @@ export default function WantApp() {
                   <>
                     <div className="page-pad" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:`20px 28px`, borderBottom:`1px solid ${colors.border}`, background:colors.card }}>
                       <div>
-                        <h1 style={{ fontFamily:font.display, fontSize:22, fontWeight:800, color:colors.text, marginBottom:2 }}>Collections</h1>
+                        <h1 style={{ fontFamily:font.display, fontSize:27, fontWeight: 400, color:colors.text, marginBottom:2 }}>Collections</h1>
                         <p style={{ fontSize:13, color:colors.text3 }}>Organise your saves into boards.</p>
                       </div>
                       <button style={btn('primary')} onClick={() => newColFor()}>
@@ -402,8 +402,8 @@ export default function WantApp() {
                                 }
                                 <div style={{ padding:'14px 16px 16px' }}>
                                   {renamingCol===col.id
-                                    ? <input value={renameVal} onChange={e=>setRenameVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){renameCol(col.id, renameVal);setRenamingCol(null)}if(e.key==='Escape')setRenamingCol(null)}} onBlur={()=>{renameCol(col.id, renameVal);setRenamingCol(null)}} autoFocus onClick={e=>e.stopPropagation()} aria-label="Rename collection" style={{ fontFamily:font.display, fontSize:15, fontWeight:700, color:colors.text, border:'none', outline:'none', borderBottom:`2px solid ${colors.violet}`, background:'transparent', width:'100%' }} />
-                                    : <div style={{ fontFamily:font.display, fontSize:15, fontWeight:700, color:colors.text, marginBottom:4 }}>{col.name}</div>
+                                    ? <input value={renameVal} onChange={e=>setRenameVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){renameCol(col.id, renameVal);setRenamingCol(null)}if(e.key==='Escape')setRenamingCol(null)}} onBlur={()=>{renameCol(col.id, renameVal);setRenamingCol(null)}} autoFocus onClick={e=>e.stopPropagation()} aria-label="Rename collection" style={{ fontFamily:font.display, fontSize:15, fontWeight: 400, color:colors.text, border:'none', outline:'none', borderBottom:`2px solid ${colors.violet}`, background:'transparent', width:'100%' }} />
+                                    : <div style={{ fontFamily:font.display, fontSize:15, fontWeight: 400, color:colors.text, marginBottom:4 }}>{col.name}</div>
                                   }
                                   <div style={{ fontSize:12, color:colors.text3, marginBottom:12 }}>{colItems.length} item{colItems.length!==1?'s':''}</div>
                                   <div style={{ display:'flex', gap:6 }}>
@@ -421,7 +421,7 @@ export default function WantApp() {
                   <div className="page-pad" style={{ padding:`${space[6]}px 28px` }}>
                     <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24, paddingBottom:20, borderBottom:`1px solid ${colors.border}` }}>
                       <button onClick={() => setViewingColId(null)} style={{ ...btn('ghost'), fontSize:13, padding:'7px 14px' }}><Icon name="arrow-left" size={14} /> Back</button>
-                      <h1 style={{ fontFamily:font.display, fontSize:22, fontWeight:800, color:colors.text, flex:1 }}>{viewingCol?.name}</h1>
+                      <h1 style={{ fontFamily:font.display, fontSize:27, fontWeight: 400, color:colors.text, flex:1 }}>{viewingCol?.name}</h1>
                     </div>
                     {viewingColItems.length === 0
                       ? <EmptyState icon="folder-open" title="No items yet" subtitle="Add items from My Saves." />
@@ -431,7 +431,7 @@ export default function WantApp() {
                               <ItemImage item={item} height={140} />
                               <div style={{ padding:'10px 12px 12px' }}>
                                 <div style={{ fontSize:12, color:colors.text, marginBottom:2, fontWeight:500 }}>{item.name}</div>
-                                <div style={{ fontSize:13, fontFamily:font.display, fontWeight:700, color:colors.text2 }}>${item.isSale?item.salePrice:item.price}</div>
+                                <div style={{ fontSize:13, fontFamily:font.display, fontWeight: 400, color:colors.text2 }}>${item.isSale?item.salePrice:item.price}</div>
                               </div>
                               <button onClick={() => toggleInCol(viewingColId!, item.id)} aria-label="Remove from collection" style={{ position:'absolute', top:8, right:8, width:24, height:24, borderRadius:6, background:colors.card, border:`1px solid ${colors.border}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:colors.text3 }}>
                                 <Icon name="x" size={13} />
@@ -463,7 +463,7 @@ export default function WantApp() {
                   {exTab === 'foryou' && (
                     <>
                       <div style={{ background:colors.card, borderRadius:radius.xl, padding:`${space[6]}px ${space[7]}px`, marginBottom:32, border:`1px solid ${colors.border}` }}>
-                        <h2 style={{ fontFamily:font.display, fontSize:24, fontWeight:800, color:colors.text, marginBottom:6 }}>Picked for you</h2>
+                        <h2 style={{ fontFamily:font.display, fontSize:29, fontWeight: 400, color:colors.text, marginBottom:6 }}>Picked for you</h2>
                         <p style={{ fontSize:13, color:colors.text3, marginBottom:20, lineHeight:1.6 }}>{recSummary||"Claude analyses your saves and finds what you didn't know you wanted."}</p>
                         <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:22 }}>
                           {[...topCats.map(c=>c.toLowerCase()),...topStores].map(chip => (
@@ -548,7 +548,7 @@ export default function WantApp() {
         {modal && (
           <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200 }} onClick={() => setModal(null)} role="dialog" aria-modal="true" aria-label={modal==='url'?'Import from URL':'Add an item'}>
             <div className="animate-scale-in" style={{ background:colors.card, borderRadius:radius.xxl, padding:'28px 30px', width:440, maxWidth:'92%', maxHeight:'90vh', overflowY:'auto', border:`1px solid ${colors.border}` }} onClick={e=>e.stopPropagation()}>
-              <h2 style={{ fontFamily:font.display, fontSize:20, fontWeight:800, color:colors.text, marginBottom:4 }}>{modal==='url'?'Import from URL':'Add an item'}</h2>
+              <h2 style={{ fontFamily:font.display, fontSize:25, fontWeight: 400, color:colors.text, marginBottom:4 }}>{modal==='url'?'Import from URL':'Add an item'}</h2>
               <p style={{ fontSize:13, color:colors.text3, marginBottom:20 }}>{modal==='url'?"Paste a product link — we'll fill in the details.":'Fill in the details below.'}</p>
 
               {modal === 'url' && (

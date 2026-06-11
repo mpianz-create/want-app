@@ -51,7 +51,7 @@ export function ProductCard({ item, collections, isDragging, onDragStart, onDrag
           {item.note && <div style={{ fontSize: 11, color: colors.text3, marginBottom: 8, fontStyle: 'italic' }}>{item.note}</div>}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: font.display, color: item.isSale ? colors.pink : colors.text }}>
+            <span style={{ fontSize: 15, fontWeight: 400, fontFamily: font.display, color: item.isSale ? colors.pink : colors.text }}>
               ${item.isSale ? item.salePrice : item.price}
             </span>
 
