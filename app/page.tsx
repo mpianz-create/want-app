@@ -160,6 +160,12 @@ export default function WantApp() {
     api(`/api/collections/${colId}`, 'DELETE').catch(() => toast.error('Could not delete'))
     toast.info('Collection deleted')
   }
+  const shareCol = (colId: string) => {
+    const url = `${window.location.origin}/c/${colId}`
+    navigator.clipboard.writeText(url)
+      .then(() => toast.success('Share link copied — send it to anyone!'))
+      .catch(() => prompt('Copy this link:', url))
+  }
   const addItem = (f: typeof modalFields) => {
     api<Item>('/api/items', 'POST', { name: f.name, store: f.store, price: parseFloat(f.price)||0, category: f.category, note: f.note, imageUrl: f.imageUrl, productUrl: f.productUrl })
       .then(item => { setItems(p => [item, ...p]); toast.success(`"${item.name}" saved`) })
@@ -472,6 +478,7 @@ export default function WantApp() {
                                   }
                                   <div style={{ fontSize:12, color:colors.text3, marginBottom:12 }}>{colItems.length} item{colItems.length!==1?'s':''}</div>
                                   <div style={{ display:'flex', gap:6 }}>
+                                    <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();shareCol(col.id)}}><Icon name="share" size={13} /> Share</button>
                                     <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();setRenamingCol(col.id);setRenameVal(col.name)}}><Icon name="pencil" size={13} /> Rename</button>
                                     <button style={{ ...btn('ghost'), fontSize:11, padding:'5px 12px', borderRadius:6 }} onClick={e=>{e.stopPropagation();if(confirm('Delete collection?'))deleteCol(col.id)}}><Icon name="trash" size={13} /> Delete</button>
                                   </div>
@@ -487,6 +494,7 @@ export default function WantApp() {
                     <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24, paddingBottom:20, borderBottom:`1px solid ${colors.border}` }}>
                       <button onClick={() => setViewingColId(null)} style={{ ...btn('ghost'), fontSize:13, padding:'7px 14px' }}><Icon name="arrow-left" size={14} /> Back</button>
                       <h1 style={{ fontFamily:font.display, fontSize:27, fontWeight: 400, color:colors.text, flex:1 }}>{viewingCol?.name}</h1>
+                      <button onClick={() => viewingColId && shareCol(viewingColId)} style={{ ...btn('secondary'), fontSize:12 }}><Icon name="share" size={14} /> Share</button>
                     </div>
                     {viewingColItems.length === 0
                       ? <EmptyState icon="folder-open" title="No items yet" subtitle="Add items from My Saves." />
