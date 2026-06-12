@@ -219,14 +219,21 @@ export default function WantApp() {
 
   const fetchFromUrl = useCallback(async () => {
     if (!urlInput.trim()) return
-    setUrlStatus({ type: 'loading', msg: 'Reading the page…' })
+    setUrlStatus({ type: 'loading', msg: 'Reading the page… (slow stores can take 30s)' })
     try {
-      const data = await api<{ name: string; store: string; price: number; category: Category; imageUrl: string | null; productUrl: string; confident: boolean }>('/api/claude/extract-url', 'POST', { url: urlInput })
+      const res = await fetch('/api/claude/extract-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: urlInput }) })
+      const data = await res.json()
+      if (!res.ok) {
+        setUrlStatus({ type: 'err', msg: data.error || 'Could not extract. Fill in manually.' })
+        return
+      }
       setModalFields({ name: data.name||'', store: data.store||'', price: String(data.price||''), category: data.category||'Fashion', note: '', imageUrl: data.imageUrl, productUrl: data.productUrl })
       setUrlStatus(data.confident
         ? { type: 'ok', msg: data.imageUrl ? 'Got it — real photo included. Review and save.' : 'Details found — review and save.' }
         : { type: 'ok', msg: 'Best guess from the URL — double-check the details.' })
-    } catch { setUrlStatus({ type: 'err', msg: 'Could not extract. Fill in manually.' }) }
+    } catch {
+      setUrlStatus({ type: 'err', msg: 'Could not reach the server. Try again.' })
+    }
   }, [urlInput])
 
   // ── People search (debounced) ──
