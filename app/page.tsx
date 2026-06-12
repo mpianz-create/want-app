@@ -12,6 +12,7 @@ import { SectionHead } from '@/components/ui/SectionHead'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ToastContainer, useToast } from '@/components/ui/Toast'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { Landing } from '@/components/Landing'
 import type { Item, Collection, RecSection, FilterType, PageTab, ExploreTab, Category, Theme } from '@/types'
 
 // ── Small API helper ──
@@ -63,11 +64,6 @@ export default function WantApp() {
   const [mounted, setMounted] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const [theme, setTheme] = useState<Theme>('auto')
-
-  // ── Auth guard ──
-  useEffect(() => {
-    if (!sessionLoading && !session) router.push('/auth/login')
-  }, [session, sessionLoading, router])
 
   // ── Load data once authed ──
   useEffect(() => {
@@ -227,7 +223,7 @@ export default function WantApp() {
   const cardGrid = 'want-grid'
 
   // ── Loading / auth gates ──
-  if (sessionLoading || (!session && typeof window !== 'undefined')) {
+  if (sessionLoading) {
     return (
       <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ fontFamily: font.display, fontSize: 34, fontWeight: 400, letterSpacing: '-0.5px', color: colors.text, opacity: 0.5 }}>
@@ -236,6 +232,7 @@ export default function WantApp() {
       </div>
     )
   }
+  if (!session) return <Landing />
 
   const navItem = (p: PageTab, icon: string, label: string) => (
     <div key={p} onClick={() => setPage(p)} role="button" tabIndex={0} onKeyDown={e => e.key==='Enter' && setPage(p)}
@@ -310,7 +307,7 @@ export default function WantApp() {
                 <span style={{ display:'block', fontWeight:600, color:colors.text, marginBottom:2 }} suppressHydrationWarning>{mounted ? getGreeting() : 'Welcome'}{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''}</span>
                 <span suppressHydrationWarning>{mounted ? (isDark ? '🌙 Night mode' : '☀️ Day mode') : ''}</span>
               </div>
-              <button onClick={() => signOut().then(() => router.push('/auth/login'))} style={{ ...btn('ghost'), fontSize:12, width:'100%', justifyContent:'center' }}>
+              <button onClick={() => signOut().then(() => router.refresh())} style={{ ...btn('ghost'), fontSize:12, width:'100%', justifyContent:'center' }}>
                 Sign out
               </button>
             </div>
