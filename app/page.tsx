@@ -56,6 +56,17 @@ export default function WantApp() {
   const [recsError, setRecsError] = useState(false)
   const [savedRecIds, setSavedRecIds] = useState<Set<string>>(new Set())
 
+  // ── Social ──
+  const [myProfile, setMyProfile] = useState<{ username: string; bio: string; name: string } | null>(null)
+  const [peopleQuery, setPeopleQuery] = useState('')
+  const [peopleResults, setPeopleResults] = useState<{ id: string; name: string; username: string; bio: string | null; isFollowing: boolean }[]>([])
+  const [peopleLoading, setPeopleLoading] = useState(false)
+  const [feed, setFeed] = useState<(Item & { by: { name: string; username: string } })[]>([])
+  const [feedLoading, setFeedLoading] = useState(false)
+  const [profileModal, setProfileModal] = useState(false)
+  const [profileFields, setProfileFields] = useState({ username: '', bio: '' })
+  const [profileErr, setProfileErr] = useState('')
+
   const [modal, setModal] = useState<null | 'manual' | 'url'>(null)
   const [modalFields, setModalFields] = useState({ name: '', store: '', price: '', category: 'Fashion' as Category, note: '', imageUrl: null as string | null, productUrl: null as string | null })
   const [urlInput, setUrlInput] = useState('')
@@ -71,6 +82,8 @@ export default function WantApp() {
     let cancelled = false
     Promise.all([api<Item[]>('/api/items'), api<Collection[]>('/api/collections')])
       .then(([i, c]) => { if (!cancelled) { setItems(i); setCollections(c); setDataLoading(false) } })
+      .then(() => api<{ username: string; bio: string; name: string }>('/api/profile'))
+      .then(p => { if (!cancelled) { setMyProfile(p); setProfileFields({ username: p.username || '', bio: p.bio || '' }) } })
       .catch(() => { if (!cancelled) { setDataLoading(false); toast.error('Could not load your saves.') } })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,6 +223,50 @@ export default function WantApp() {
     } catch { setUrlStatus({ type: 'err', msg: 'Could not extract. Fill in manually.' }) }
   }, [urlInput])
 
+  // ── People search (debounced) ──
+  useEffect(() => {
+    if (page !== 'people') return
+    if (peopleQuery.trim().length < 2) { setPeopleResults([]); return }
+    setPeopleLoading(true)
+    const t = setTimeout(() => {
+      api<typeof peopleResults>(`/api/users/search?q=${encodeURIComponent(peopleQuery.trim())}`)
+        .then(setPeopleResults).catch(() => {}).finally(() => setPeopleLoading(false))
+    }, 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peopleQuery, page])
+
+  // ── Feed loads when People page opens ──
+  useEffect(() => {
+    if (page !== 'people' || !session) return
+    setFeedLoading(true)
+    api<typeof feed>('/api/feed').then(setFeed).catch(() => {}).finally(() => setFeedLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, session])
+
+  const toggleFollowUser = (username: string) => {
+    setPeopleResults(p => p.map(r => r.username === username ? { ...r, isFollowing: !r.isFollowing } : r))
+    fetch(`/api/users/${username}/follow`, { method: 'POST' })
+      .then(r => { if (!r.ok) throw new Error() })
+      .then(() => api<typeof feed>('/api/feed').then(setFeed).catch(() => {}))
+      .catch(() => {
+        setPeopleResults(p => p.map(r => r.username === username ? { ...r, isFollowing: !r.isFollowing } : r))
+        toast.error('Could not update follow')
+      })
+  }
+
+  const saveProfile = async () => {
+    setProfileErr('')
+    try {
+      const res = await fetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profileFields) })
+      const data = await res.json()
+      if (!res.ok) { setProfileErr(data.error || 'Could not save'); return }
+      setMyProfile(p => p ? { ...p, ...profileFields } : p)
+      setProfileModal(false)
+      toast.success('Profile updated')
+    } catch { setProfileErr('Could not save. Try again.') }
+  }
+
   // ── Computed ──
   const cats: Record<string,number> = {}; const stores: Record<string,number> = {}
   items.forEach(i => { cats[i.category]=(cats[i.category]||0)+1; if(i.store) stores[i.store]=(stores[i.store]||0)+1 })
@@ -285,6 +342,7 @@ export default function WantApp() {
               {navItem('saves', 'bookmark', 'My Saves')}
               {navItem('collections', 'folder', 'Collections')}
               {navItem('explore', 'sparkles', 'Explore')}
+              {navItem('people', 'users', 'People')}
             </nav>
 
             <div style={{ marginTop:24, padding:'0 4px' }}>
@@ -307,6 +365,14 @@ export default function WantApp() {
                 <span style={{ display:'block', fontWeight:600, color:colors.text, marginBottom:2 }} suppressHydrationWarning>{mounted ? getGreeting() : 'Welcome'}{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''}</span>
                 <span suppressHydrationWarning>{mounted ? (isDark ? '🌙 Night mode' : '☀️ Day mode') : ''}</span>
               </div>
+              {myProfile?.username && (
+                <a href={`/u/${myProfile.username}`} style={{ ...btn('ghost'), fontSize:12, width:'100%', justifyContent:'center', textDecoration:'none', marginBottom:6 }}>
+                  My profile
+                </a>
+              )}
+              <button onClick={() => setProfileModal(true)} style={{ ...btn('ghost'), fontSize:12, width:'100%', justifyContent:'center', marginBottom:6 }}>
+                Edit profile
+              </button>
               <button onClick={() => signOut().then(() => router.refresh())} style={{ ...btn('ghost'), fontSize:12, width:'100%', justifyContent:'center' }}>
                 Sign out
               </button>
@@ -529,12 +595,89 @@ export default function WantApp() {
                 </div>
               </div>
             )}
+
+            {/* ════ PEOPLE ════ */}
+            {page === 'people' && (
+              <div className="animate-fade-in">
+                <div className="page-pad" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:`20px 28px`, borderBottom:`1px solid ${colors.border}`, background:colors.card }}>
+                  <div>
+                    <h1 style={{ fontFamily:font.display, fontSize:27, fontWeight: 400, color:colors.text, marginBottom:2 }}>People</h1>
+                    <p style={{ fontSize:13, color:colors.text3 }}>Find friends, follow their taste.</p>
+                  </div>
+                </div>
+
+                <div className="page-pad" style={{ padding:`${space[6]}px 28px` }}>
+                  {/* Search */}
+                  <div style={{ display:'flex', alignItems:'center', gap:8, background:colors.card, border:`1px solid ${colors.border2}`, borderRadius:radius.md, padding:'10px 16px', maxWidth:440, marginBottom:24 }}>
+                    <Icon name="search" size={15} style={{ color: colors.text3 }} />
+                    <input value={peopleQuery} onChange={e=>setPeopleQuery(e.target.value)} placeholder="Search by name or username…" aria-label="Search for people"
+                      style={{ border:'none', outline:'none', background:'transparent', fontFamily:font.body, fontSize:13, color:colors.text, width:'100%' }} />
+                    {peopleQuery && <button onClick={() => setPeopleQuery('')} style={{ background:'none', border:'none', cursor:'pointer', color:colors.text3, padding:0 }} aria-label="Clear search"><Icon name="x" size={14} /></button>}
+                  </div>
+
+                  {/* Results */}
+                  {peopleLoading && <p style={{ fontSize:13, color:colors.text3 }}>Searching…</p>}
+                  {!peopleLoading && peopleQuery.trim().length >= 2 && peopleResults.length === 0 && (
+                    <p style={{ fontSize:13, color:colors.text3, marginBottom:24 }}>No one found for &ldquo;{peopleQuery}&rdquo; — invite them to WANT*!</p>
+                  )}
+                  {peopleResults.length > 0 && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10, maxWidth:560, marginBottom:36 }}>
+                      {peopleResults.map(u => (
+                        <div key={u.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 16px', borderRadius:radius.lg, border:`1px solid ${colors.border}`, background:colors.card }}>
+                          <div aria-hidden="true" style={{ width:42, height:42, borderRadius:'50%', background:colors.violetL, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:font.display, fontSize:19, color:colors.violet, flexShrink:0 }}>
+                            {(u.name || u.username)[0]?.toUpperCase()}
+                          </div>
+                          <a href={`/u/${u.username}`} style={{ flex:1, textDecoration:'none', minWidth:0 }}>
+                            <div style={{ fontSize:14, fontWeight:600, color:colors.text, fontFamily:font.body }}>{u.name}</div>
+                            <div style={{ fontSize:12, color:colors.text3, fontFamily:font.body }}>@{u.username}{u.bio ? ` — ${u.bio.slice(0,50)}` : ''}</div>
+                          </a>
+                          <button onClick={() => toggleFollowUser(u.username)} style={{ ...btn(u.isFollowing ? 'secondary' : 'primary'), fontSize:12, padding:'7px 16px' }}>
+                            {u.isFollowing ? 'Following' : 'Follow'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Feed */}
+                  <SectionHead label="From people you follow" />
+                  {feedLoading && <SkeletonGrid heights={[240,260,220]} />}
+                  {!feedLoading && feed.length === 0 && (
+                    <EmptyState icon="users" title="Your feed is empty" subtitle="Follow people above and their saves will show up here." />
+                  )}
+                  {!feedLoading && feed.length > 0 && (
+                    <div className="want-grid">
+                      {feed.map(item => (
+                        <div key={item.id} style={{ borderRadius:radius.xl, overflow:'hidden', border:`1px solid ${colors.border}`, background:colors.card }}>
+                          <ItemImage item={item} height={230} />
+                          <div style={{ padding:'12px 14px 14px' }}>
+                            <a href={`/u/${item.by.username}`} style={{ fontSize:11, color:colors.violet, fontFamily:font.body, fontWeight:600, textDecoration:'none', display:'block', marginBottom:6 }}>
+                              @{item.by.username}
+                            </a>
+                            <div style={{ fontSize:10, color:colors.text3, textTransform:'uppercase', letterSpacing:'1px', marginBottom:4, fontWeight:600 }}>{item.store}</div>
+                            <div style={{ fontSize:13, color:colors.text, lineHeight:1.4, fontWeight:500 }}>{item.name}</div>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:8 }}>
+                              <span style={{ fontSize:15, fontFamily:font.display, color:item.isSale ? colors.pink : colors.text }}>${item.isSale ? item.salePrice : item.price}</span>
+                              {item.productUrl && (
+                                <a href={item.productUrl} target="_blank" rel="noopener noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:colors.violet, textDecoration:'none', fontWeight:600 }} aria-label={`Open ${item.name}`}>
+                                  Shop <Icon name="external-link" size={12} />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </main>
         </div>
 
         {/* ── MOBILE BOTTOM NAV ── */}
         <nav className="mobile-nav" aria-label="Mobile navigation" style={{ borderTop:`1px solid ${colors.border}`, background:colors.card, justifyContent:'space-around', alignItems:'center', padding:'8px 0', flexShrink:0 }}>
-          {([['saves','bookmark','Saves'],['collections','folder','Collections'],['explore','sparkles','Explore']] as [PageTab,string,string][]).map(([p,icon,label]) => (
+          {([['saves','bookmark','Saves'],['collections','folder','Collections'],['explore','sparkles','Explore'],['people','users','People']] as [PageTab,string,string][]).map(([p,icon,label]) => (
             <button key={p} onClick={() => setPage(p)} aria-current={page===p?'page':undefined}
               style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', padding:'4px 16px', color:page===p?colors.text:colors.text3, fontFamily:font.body, fontSize:11, fontWeight:page===p?600:400 }}>
               <Icon name={icon} size={20} />
@@ -598,6 +741,29 @@ export default function WantApp() {
           </div>
         )}
       </div>
+
+
+      {/* ── PROFILE MODAL ── */}
+      {profileModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200 }} onClick={() => setProfileModal(false)} role="dialog" aria-modal="true" aria-label="Edit profile">
+          <div className="animate-scale-in" style={{ background:colors.card, borderRadius:radius.xxl, padding:'28px 30px', width:420, maxWidth:'92%', border:`1px solid ${colors.border}` }} onClick={e=>e.stopPropagation()}>
+            <h2 style={{ fontFamily:font.display, fontSize:25, fontWeight: 400, color:colors.text, marginBottom:4 }}>Edit profile</h2>
+            <p style={{ fontSize:13, color:colors.text3, marginBottom:20 }}>Your profile is public at want-app-ten.vercel.app/u/{profileFields.username || 'username'}</p>
+
+            <label style={lbl} htmlFor="profile-username">Username</label>
+            <input id="profile-username" value={profileFields.username} onChange={e=>setProfileFields(f=>({...f,username:e.target.value.toLowerCase()}))} placeholder="lowercase, no spaces" style={inp} />
+            <label style={lbl} htmlFor="profile-bio">Bio</label>
+            <input id="profile-bio" value={profileFields.bio} onChange={e=>setProfileFields(f=>({...f,bio:e.target.value}))} placeholder="quiet luxury enthusiast. auckland." maxLength={160} style={inp} />
+
+            {profileErr && <div role="alert" style={{ fontSize:12, marginTop:10, padding:'10px 14px', borderRadius:radius.md, background:'rgba(220,0,0,0.08)', color:'#991B1B' }}>{profileErr}</div>}
+
+            <div style={{ display:'flex', gap:10, marginTop:24, justifyContent:'flex-end' }}>
+              <button onClick={() => setProfileModal(false)} style={btn('secondary')}>Cancel</button>
+              <button onClick={saveProfile} disabled={!profileFields.username.trim()} style={btn('primary')}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ToastContainer toasts={toasts} onDismiss={dismiss} isDark={isDark} />
     </>

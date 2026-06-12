@@ -7,6 +7,8 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  username: text('username').unique(),
+  bio: text('bio'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 })
@@ -78,3 +80,9 @@ export const collectionItems = sqliteTable('collection_items', {
   collectionId: text('collection_id').notNull().references(() => collections.id, { onDelete: 'cascade' }),
   itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
 }, t => [primaryKey({ columns: [t.collectionId, t.itemId] })])
+
+export const follows = sqliteTable('follows', {
+  followerId: text('follower_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  followingId: text('following_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, t => [primaryKey({ columns: [t.followerId, t.followingId] })])
